@@ -25,7 +25,7 @@ The [Health Analytics Collaboratory (HAC)](https://hac.nursing.umich.edu/) is an
 R Code
 ======
 
-The examples, demonstrations and simulations are designed, built, implemented and validated in the [R environment](https://www.r-project.org). See teh [code folder](https://github.com/SOCR/HAC_AD/tree/master/code).
+The examples, demonstrations and simulations are designed, built, implemented and validated in the [R environment](https://www.r-project.org). See the [code folder](https://github.com/SOCR/HAC_AD/tree/master/code).
 
 Team
 ====

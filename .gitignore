@@ -1,7 +1,11 @@
-# prevent data files from commit
+# prevent data files
 *.csv
 *.txt
 *.xlsx
+
+# prevent knitr artifacts from commit
+*.pdf
+*.tex
 
 data/*
 output/*

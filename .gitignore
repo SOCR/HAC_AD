@@ -2,6 +2,13 @@
 *.csv
 *.txt
 *.xlsx
+*.Rdata
+*.RData
+*.rdata
+*.rda
+*.Rda
+*.Rds
+*.rds
 
 # prevent knitr artifacts from commit
 *.pdf

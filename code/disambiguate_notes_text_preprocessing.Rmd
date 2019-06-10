@@ -1,0 +1,673 @@
+---
+title: "Health Analytics Collaboratory (HAC) - University of Michigan"
+author: "<h3>Ivo Dinov, Cooper Stansbury, Haiyin Liu, Bingxin Chen</h3>"
+date: "`r format(Sys.time(), '%B %Y')`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    highlight: tango
+    includes:
+      before_body: SOCR_header.html
+    number_sections: yes
+    theme: spacelab
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+tags:
+- HAC
+- DSPA
+- SOCR
+- MIDAS
+- Big Data
+- Predictive Analytics
+- Computable Phenotypes
+subtitle: '<h2><u>HAC Alzheimer''s Disease Digital Health Analytics Project: Text
+  Preprocessing</u></h2>'
+---
+
+# Processing Logistics
+
+## Note on Project Directory  Structure:
+This project assumes that:
+  - There is a root working directory (in my case, called 'HAC')
+  - There is a subdirectory called `data/` with the data files (`.xlsx`).
+  - `CARD_dataset_tools/` has been downloaded to the working directory.
+  - `.Rmd` scripts are in a directory called something like `notebooks/`.
+ 
+## Working Citations
+  - [Text_Processing_In_R](http://www.mjdenny.com/Text_Processing_In_R.html)
+  - [r-text-mining-pre-processing](https://analytics4all.org/2016/12/22/r-text-mining-pre-processing/)
+  - [SICSS_Basic_Text_Analysis](https://cbail.github.io/SICSS_Basic_Text_Analysis.html)
+  - [19_NLP_TextMining](http://www.socr.umich.edu/people/dinov/courses/DSPA_notes/19_NLP_TextMining.html)
+
+## Packages/Dependencies
+
+```{r}
+library(tidyverse)
+library(tm)
+library(SnowballC)
+library(tidytext)
+library(tidyr)
+library(dplyr)
+library(reshape2)
+
+## another text_processing library that may be worth considering, spaCy is extremely powerful
+## https://github.com/quanteda/spacyr
+# library(quanteda)
+```
+
+Selected Package Documentation Links
+  - [library(tm)](https://cran.r-project.org/web/packages/tm/tm.pdf)
+  - [library(SnowballC)](https://cran.r-project.org/web/packages/SnowballC/SnowballC.pdf)
+  - [library(tidytext)](https://cran.r-project.org/web/packages/tidytext/tidytext.pdf)
+
+```{r}
+sessionInfo()
+```
+
+```{r}
+# expect 1.0.1, 0.7.0, 1.0.1
+sapply(c('repr', 'IRdisplay', 'IRkernel'), function(p) paste(packageVersion(p)))
+```
+
+# Load data
+Load the data from the source file. Assumes file in `.xlsx` format. 
+
+
+```{r}
+getwd() # make sure you're in the right spot! Expect "/Users/milk/Desktop/work/HAC"
+```
+
+This assumes that there is a separate directory for the data file. **Watch out for paths.**
+
+```{r}
+# here we use the load and convert functions in the local file
+source('code/load_and_convert_functions.R')
+raw_data.df <-  read_xlsx_from_path(filepath = 'data/DS_PreprocessedAnonymized_Text.xlsx')
+```
+
+# Subset Text Field
+Subset the `data.frame`. We retain the text notes and ID fields for mapping back to the data.frame.
+
+```{r}
+subset_dataframe <- function(my_dataframe, column_vector) {
+  # 'function to subset a dataframe based on list of columns, returns new data.frame
+  # '@param my_dataframe: a data.frame from which to derive the subset
+  # '@param column_vector: list of strings containing columns to included in new data.frame
+  subset.df <- subset(my_dataframe, select=column_vector)
+  return(subset.df)
+}
+
+# list of columns to process
+cols = c('STUDY_PAT_ID', 'STUDY_ENC_ID', 'STUDY_NOTE_ID','DS_PreprocessedAnonymized_Text')
+text.df <- subset_dataframe(raw_data.df, cols)
+
+head(text.df , 2)
+```
+
+# Term Frequencies
+
+Below we define a function to calculate raw counts and relative frequecies from a given column of textual data. 
+
+```{r}
+get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
+  # 'function to return a new data.frame w/ term frequencies from a specified column
+  # '@df: data.frame containing column to use
+  # '@columnName: colName of the column to use; expects a string value not index position
+  tmp_corpus <- VCorpus(VectorSource(df[, columnName]))
+  tdm <- as.matrix(TermDocumentMatrix(tmp_corpus))
+  frequency_df <- data.frame(token = rownames(tdm), 
+                      count = rowSums(tdm), 
+                      row.names = NULL)
+  
+  total_count <- sum(frequency_df$count)
+  frequency_df$normalized_frequency <- sapply(frequency_df$count, function(x) x/total_count)
+  
+  
+  if (!sortByHighFQ) {
+    return(frequency_df)
+  } else {
+    # sort output by most frequent tokens
+    frequency_df <- frequency_df[with(frequency_df,order(-count)),]  
+  }
+  return(frequency_df)
+}
+
+raw_frequencies <- get_token_frequecy_from_column(text.df, 'DS_PreprocessedAnonymized_Text', sortByHighFQ=TRUE)
+head(raw_frequencies, 50)
+```
+
+If we need to save a relative frequency file for CARD for any reason, here is a function to do it:
+
+```{r}
+create_term_frequency_file_for_card <- function(term_frequency_df) {
+  # 'function to save a file with term frequencies in CARD format:
+  # ' each line formated as 'word \t normalized_frequency'.(Normalized frequency = (word frequency)/(Total # of words))
+  # '@term_frequency_df: data.frame containing word frequency information
+  today_date = format(Sys.time(), "%m%d%Y")
+  filename = "word_frequencies.csv" # note, this needs to be changed
+  save_path = paste("data/", today_date, filename , sep="")
+
+  write.csv(term_frequency_df[, c('token', 'normalized_frequency')], 
+            file=save_path, 
+            sep = "\t", 
+            row.names=FALSE,
+            col.names=FALSE)
+  
+  print(paste('File:', save_path, 'written successfully!'))
+}
+  
+# # uncomment to create file
+# create_term_frequency_file_for_card(raw_frequencies)
+```
+
+
+# CARD Abbreviation Disambiguiation
+
+We utilize on [CARD](https://sbmi.uth.edu/ccb/resources/abbreviation.htm):
+  - Wu Y, Denny JC, Trent Rosenbloom S, Miller RA, Giuse DA, Wang L, et al. [A long journey to short abbreviations: developing an open-source framework for clinical abbreviation recognition and disambiguation (CARD)](https://www.ncbi.nlm.nih.gov/pubmed/27539197). J Am Med Inform Assoc. 2017 Apr 1;24(e1):e79-86. 
+
+```{r}
+text.df[1,'STUDY_NOTE_ID']
+text.df[1, 'DS_PreprocessedAnonymized_Text']
+```
+
+
+# Helper functions (subroutines)
+These functions are used during the disambiguation process. 
+
+** Note: ** using `system` presuposes that the system is compatible with the system listed in `sessionInfo()`. It should be noted that this command behaves differently on different OS. See docs for more information: [system documentation](https://stat.ethz.ch/R-manual/R-devel/library/base/html/system.html). 
+
+
+```{r}
+execute_card <- function(row) {
+  # 'function to generate card output based on a clinical note piped from stdin
+  # '@row: a row in a dataframe conatined a char string that is a clinical note
+  clinical_note_string <- as.String(row)
+  command <- "java -classpath ./bin MetaMapWrapper.SenseDisambiguationText"
+  
+  detected_abbreviations <- system(command,
+                   input = clinical_note_string,
+                   ignore.stdout=FALSE,
+                   ignore.stderr=FALSE,
+                   wait = FALSE,
+                   intern = TRUE)
+  
+  result <- gsub("[\r\n]", "", detected_abbreviations)
+  return(result) 
+}
+
+
+check_if_begin_sentence <- function(str_line) {
+  # 'boolean function returns 'T' iff str_line starts with 'Abbr:'
+  # '@param str_line: a string value
+  if ("BEGIN_SENTENCE:" %in% str_line) {
+      return(TRUE)
+  } else{
+    return(FALSE) 
+  } 
+}
+
+parse_abbr_line <- function(str_line) {
+  # 'function to parse a tab separated line and return detected and long-form abbreviations
+  # '@param str_line: string to parse into tab-separated list
+  parsed_line <- strsplit(str_line, '[\t]') [[1]]
+  detected_text <- parsed_line[2] # index of detected text
+  long_form_text <- parsed_line[4] # index of long-form text
+  return(c(detected_text, long_form_text)) 
+}
+
+
+perform_substitions <- function(sentence, abbreviation_list, toPrint=TRUE) {
+  # 'function to return a new sentence with CARD predictions substituted
+  # '@sentence: a string containing the sentence with predicted abbreviations 
+  # '@abbreviation_list: list of detected abbrevations
+  # '@toPrint: boolean argument specifiying whether or not to print output to console
+  new_sentence <- sentence
+  
+  ######################################################################################################### TODO 
+  # this may not be working correctly, replaces incorrect occurences
+  # only detect distinct tokens (is this a correct assumption?)
+  # use first match (sub) to replace abbreviations in order
+  
+  for (abbr in abbreviation_list) {
+      parsed_abbr <- parse_abbr_line(abbr)
+      detected_abbr <- paste(parsed_abbr[1]," ", sep="")
+      long_form_abbr <- paste(" ", parsed_abbr[2], " ", sep="")
+    
+      if (toPrint) {
+          print(paste('detected:', detected_abbr, 'long form:', long_form_abbr)) 
+      }
+      
+      new_sentence <- sub(detected_abbr, long_form_abbr, new_sentence)
+  }
+  
+  if (toPrint) {
+      print(paste('disambiguated sentence:', new_sentence)) 
+  }
+  return(new_sentence)
+}
+```
+
+## Disambiguiation
+
+We pipe each record (clinical note) to a rewritten `MetaMapWrapper.SenseDisambiguationText` function. We execute the CARD java `.class` file via the `system()` command and, which expects a bash shell. Below is the flow control function including post-abbreviation processing. Here we manage the CARD output and perform disambiguation, outputting a new string with all sentences. Saved to new column of `data.frame`.
+
+```{r}
+### IMPORTANT NOTE: this function REQUIRES being run from the given path as wd, or else CARD can't find the classes on classpath
+# set execution path for this chunk
+exe_path <- 'TightClusteringSenseDetection_v2' # required to run 'MetaMapWrapper.SenseDisambiguationText'
+setwd(exe_path) 
+getwd()
+
+
+disambiguate_note_contents <- function(row, toPrint=TRUE) {
+  # 'function to perform substitions for CARD abbreviation disambiguation
+  # '@row: row containing clinical note to disambiguate
+  # '@toPrint: boolean argument specifiying whether or not to print output to console, passed to substitution f(x)
+  
+  # generate CARD output for current row, returns a list()
+  disambiguation_predictions <- execute_card(row)
+  
+  num_lines <- length(disambiguation_predictions)
+  disamgiguated_note <- ""
+  total_abbreviations <- 0
+
+  # iterate through next lines holding position at a sentence
+  # check if 'is sentence' by matching BEGIN_SENTENCE
+  for (idx in 1:num_lines) {
+      if (check_if_begin_sentence(disambiguation_predictions[[idx]]))  {
+        # this will be the index and value of the sentence following the BEGIN_SENTENCE flag
+        next_idx <- idx + 1
+        current_sentence <- disambiguation_predictions[[next_idx]]
+
+        # find next END_SENTENCE. flag
+        num_indices_to_slice <- match('END_SENTENCE.', disambiguation_predictions[next_idx:num_lines])
+
+        # start one beyond the sentence value (2 beyond the flag)
+        start_slice <- next_idx + 1
+        # end one short of the next END flag (do not include)
+        end_slice <- idx + (num_indices_to_slice - 1)
+
+        # get a slice with all abbreviations predicted for substituion
+        if ((start_slice <= end_slice) & (start_slice < length(disambiguation_predictions))) {
+            abbreviation_predictions <- disambiguation_predictions[start_slice:end_slice]
+        } else{
+            abbreviation_predictions <- NULL
+        }
+        
+        if (toPrint) {
+          print('####################################')
+          print(paste('original sentence:', current_sentence))
+        }
+      
+        num_abbreviations_detected <- 0
+
+        # only call substitions on predicted abbrs
+        if (!is.null(abbreviation_predictions)) {
+          disambiguated_current_sentence <- perform_substitions(current_sentence, abbreviation_predictions, toPrint)
+          disamgiguated_note <- paste(disamgiguated_note, disambiguated_current_sentence)
+          num_abbreviations_detected <- length(abbreviation_predictions)
+        } else {
+          # always add sentence regardless if abbrs found
+          disamgiguated_note <- paste(disamgiguated_note, current_sentence)
+        } # end if abbreviation list NULL
+        
+        total_abbreviations <- total_abbreviations + num_abbreviations_detected
+        
+        if (toPrint) {
+              print(paste('total abbreviations detected: ', num_abbreviations_detected))
+          }
+     } # end if current index is flag
+  } # end for each index
+  return(disamgiguated_note)
+} 
+
+# # TESTING
+# sapply(text.df$DS_PreprocessedAnonymized_Text[1:4], disambiguate_note_contents, toPrint=FALSE)
+
+
+text.df$card_disambiguated_note <- sapply(text.df$DS_PreprocessedAnonymized_Text, disambiguate_note_contents, toPrint=FALSE)
+gc()
+```
+
+```{r}
+head(text.df$card_disambiguated_note, 1)
+```
+
+```{r}
+head(text.df, 4)
+```
+
+
+Sanity check. 
+
+```{r}
+nrow(text.df) # expect 104 on testing data
+```
+
+```{r}
+names(text.df)
+```
+
+
+Write data out to file to inspect.
+
+```{r}
+# today_date = format(Sys.time(), "%m%d%Y")
+# filename = "compare_disambiguation.csv" # note, this needs to be changed
+# csv_save_path = paste("data/", today_date, filename , sep="")
+# 
+# write.csv(text.df, file=csv_save_path)
+```
+
+
+# Text Mining Pre-processing
+This section contains various transformation operations on the subsetted `data.frame`. The ultimate product is a new `data.frame` with increased dimensionality. The [DSPA Textbook (Chapter 19) provides additional TM/NLP rotocols](http://www.socr.umich.edu/people/dinov/courses/DSPA_notes/19_NLP_TextMining.html).
+
+The function below performs a number of steps:
+
+  - Load column vector containing text notes into library `tm` corpus object. Important to note that we create a new object, leaving the 'raw text notes' untouched during analysis. Importantly, here is the [documentation](https://www.rdocumentation.org/packages/tm/versions/0.7-6/topics/Corpus) for a corpus object. 
+  - We remove punctuation characters and numbers and make all characters lowercase. **NOTE:** Numbers will be important for later stages of the analysis (for example, for extracting dosage information). These operations will need to be performed on the original text data.
+  - `content_transformer(tolower)` responds to an update in `tm`. See: [/questions/24771165](https://stackoverflow.com/questions/24771165/r-project-no-applicable-method-for-meta-applied-to-an-object-of-class-charact).
+  - We can remove common English language words from the analysis. **Note on removing stopwords:**This is an important step to revisit, as many of these words may end up being quite useful.
+  - We can reduce each word to its 'stem,' or 'root.' See the [wikipedia page](https://en.wikipedia.org/wiki/Word_stem) for more information.
+  - We tidy-up whitespace characters
+
+
+```{r}
+def_perform_text_preprocessing_operations <- function(columnVector, stripName=TRUE, rmStopWords = FALSE, stemResults=FALSE) {
+  # 'function to chain together various text preprocessing functions
+  # '@columnVector: a column vector of textual data to process
+  
+  newVector <- columnVector
+  
+  if (stripName) {
+    # strip de-identifying derivitives
+    newVector <- gsub("[|NAME|]", "", columnVector) 
+  } else{}
+  
+  doc_corpus <- VCorpus(VectorSource(newVector)) # create corpus opbject
+  doc_corpus<-tm_map(doc_corpus, content_transformer(tolower)) # lowercase all, this makes disambiguation easier
+  doc_corpus<-tm_map(doc_corpus, removePunctuation) # remove punctuation characters
+  doc_corpus<-tm_map(doc_corpus, removeNumbers) # remove numbers
+  
+  if (rmStopWords) {
+    doc_corpus<-tm_map(doc_corpus, removeWords, stopwords("english"))
+  }
+  
+  if (stemResults) {
+    doc_corpus<-tm_map(doc_corpus, stemDocument)
+  }
+  
+  doc_corpus <- tm_map(doc_corpus, stripWhitespace) # clean up whitespace
+  return(doc_corpus)
+}
+
+
+# invoke using defaults
+doc_corpus <- def_perform_text_preprocessing_operations(text.df$card_disambiguated_note)
+doc_corpus[[2]]$content # empirical sanity-check
+```
+
+## Add clean text back to `data.frame`
+
+The `Corpus` object from `tm` is ordered, so we can apply this back into the subsetted `data.frame`.
+
+```{r}
+add_preprocessed_text_to_df <- function(df_to_append_to, cleaned_doc_corpus) {
+  # ' function to append a doc corpus back to a data frame as a new column, return modified input data.frame
+  # '@df_to_append_to: data.frame to append new column to
+  # '@cleaned_doc_corpus: processed doc corpus object
+  
+  temp.df <- data.frame(text=unlist(sapply(cleaned_doc_corpus, `[`, "content")), 
+    stringsAsFactors=F)
+
+  df_to_append_to$processed_text <- temp.df$text
+  return(df_to_append_to)
+}
+
+text.df <- add_preprocessed_text_to_df(text.df, doc_corpus)
+head(text.df)
+```
+
+We save the results to disk for empirical validation and inspection:
+
+```{r}
+# today_date = format(Sys.time(), "%m%d%Y")
+# filename = "compare_disambiguation_and_preprocessing.csv" # note, this needs to be changed
+# csv_save_path = paste("data/", today_date, filename , sep="")
+# 
+# write.csv(text.df, file=csv_save_path)
+```
+
+
+# Term Frequency - Inverse Document Frequency (TF-IDF)
+
+For a primer, please read the [wikipedia page](https://en.wikipedia.org/wiki/Tf%E2%80%93idf). Note the high sparsity.
+
+```{r}
+doc_dtm<-DocumentTermMatrix(doc_corpus)
+doc_dtm$dimnames$Docs <- as.character(text.df$STUDY_NOTE_ID) # make sure to preserve document names
+```
+
+
+```{r}
+get_shortest_document_length <- function(doc_dtm) {
+  # 'function to find the shortest document
+  # '@corpusObject
+  rowTotals <- apply(doc_dtm , 1, sum)
+  print(min(rowTotals)) # the shortest document
+}
+
+get_shortest_document_length(doc_dtm)
+```
+
+```{r}
+findFreqTerms(doc_dtm, lowfreq = 50) # look at terms that appear at least 25 times
+```
+
+## Create tf-idf object 
+
+```{r}
+dtm.tfidf <- DocumentTermMatrix(doc_corpus, control = list(weighting=weightTfIdf))
+dtm.tfidf$dimnames$Docs <- as.character(text.df$STUDY_NOTE_ID)
+```
+
+
+## Convert tf_idf object to `data.frame` and pivot so that each term is a column. Important reference: [questions/8161836](https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe).
+
+```{r}
+dtm.tfidf_long <- tidy(dtm.tfidf, row_names=dtm.tfidf$dimnames$Docs, col_names=dtm.tfidf$dimnames$Terms)
+dtm.tfidf_df <- dcast(dtm.tfidf_long, document ~ term , value.var = 'count' )
+dtm.tfidf_df <- dtm.tfidf_df %>% replace(is.na(.), 0) # this is slow
+colnames(dtm.tfidf_df)[colnames(dtm.tfidf_df)=="document"] <- "STUDY_NOTE_ID"
+```
+
+
+```{r}
+dtm.tfidf_df <- dtm.tfidf_df[, !duplicated(colnames(dtm.tfidf_df))] # remove duplicate columns
+
+sum(duplicated(colnames(dtm.tfidf_df)))
+# dtm.tfidf_df[duplicated(lapply(dtm.tfidf_df, summary))]
+```
+
+
+## Add term counts back to original `data.frame` as new variable.
+
+
+```{r}
+########################## TODO ########################## 
+# Check this for errors
+# Check this for correctness
+# maybe try cbind? # new_features_df <- cbind(text.df, dtm.tfidf_df)
+########################## TODO ########################## 
+
+new_features_df <- merge(x = text.df,
+                         y = dtm.tfidf_df,
+                         by.y=c('STUDY_NOTE_ID'),
+                         by.x=c('STUDY_NOTE_ID'),
+                         all.x = TRUE)
+head(new_features_df)
+```
+
+
+```{r}
+ncol(new_features_df) # expect 104
+```
+
+
+## Quick Descriptive Peek
+
+Here we look in the document term matrix for positive correlation with the word stem `memori`. See anything interesting?
+
+```{r}
+findAssocs(doc_dtm, "memori", corlimit = 0.9)
+```
+
+## Remove Sparse Terms
+
+This will allow us to remove rarely occurring words and reduce the dimensionality of the dataset, should we need to do this.
+
+```{r}
+# doc_dtm_spase <-removeSparseTerms(doc_dtm, 0.90)
+# doc_dtm
+# doc_dtm_spase
+```
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+# Appendix: Older Code
+
+## Abbreviations
+
+Detect Abbreviations using pretrqined SVM, save results to new directory.
+
+```{r}
+# run_CARD_abbrev_jar <- function(jar_path, input_dir, output_dir) {
+#   # function to run CARD abbreviation detection
+#   # @param jar_path: path to the executable .jar file
+#   # @param input_dir: directory with clinical notes
+#   # @param output_dir: directory to save CARD output
+#   
+#   command <- paste("java -jar ", jar_path," -i ", input_dir, " -o ", output_dir, " -sb", sep="")
+#   system(command, intern = TRUE)
+#   
+# }
+# 
+# 
+# run_CARD_abbrev_jar(jar_path = 'CARD_dataset_tools/AbbreviationDetection_v1.1_beta.jar-02-19/AbbreviationDetection_v1.1_beta.jar',
+#                                 input_dir = 'text_files_for_CARD/',
+#                                 output_dir = 'abbreviation_output_CARD/')
+```
+
+## Sense Detection
+
+```{r}
+# run_CARD_sense_jar <- function(jar_path, lang_file, input_dir, output_dir) {
+#   # function to run CARD abbreviation detection
+#   # @param jar_path: path to the executable .jar file
+#   # @param input_dir: directory with clinical notes
+#   # @param output_dir: directory to save CARD output
+#   
+#   command <- paste("java -jar ", jar_path," -i ", input_dir, " -o ", output_dir, " -av ", lang_file, sep="")
+#   system(command, intern = TRUE)
+#   
+# }
+# 
+# # run sense detection using adam
+# run_CARD_sense_jar(jar_path = 'CARD_dataset_tools/SenseDetection_v1.0_beta/SenseDetection_v1.0_beta.jar',
+#                                 lang_file = 'CARD_dataset_tools/adam_database.txt',
+#                                 input_dir = 'text_files_for_CARD/',
+#                                 output_dir = 'abbreviation_output_CARD/')
+```
+
+Saving dataframes to disk
+
+```{r}
+# save_whole_df_file <- function(df, filename) {
+#   # function to save data.frame to a .csv file with each record in the data.frame
+#   # saved as record in csv
+#   # @param df A data.frame object to be saved
+#   # @param filename A string value to which the current date is appended in order to save the file
+# 
+#   today_date = format(Sys.time(), "%m%d%Y")
+#   card_input_dir = 'text_files_for_CARD/'
+#   save_path = paste(card_input_dir, today_date, filename , sep="") # append today's date
+#   write.csv(df,save_path, row.names = FALSE)
+#   print(paste('DataFrame saved to file saved to ', save_path))
+# 
+# }
+# 
+# save_whole_df_to_card_file(text.df, 'card_input.csv')
+```
+
+
+**WARNING:** This cell will cause problems if run as-is for large data.frames. The following function will save each record to a unique file for CARD. 
+
+```{r}
+# ##### SAVE EACH RECORD AS NEW FILE
+# save_each_record_to_card_file <- function(df) {
+#   # function to save data.frame to a .csv file with each record in the data.frame
+#   # saved as record in csv
+#   # @param df A data.frame object to be saved, each row will be saved to unique file
+# 
+#   for (i in 1:nrow(df)) {
+#     clincial_note <- df[i,'DS_PreprocessedAnonymized_Text'] #  variable for clinical note value
+#     # creates a unique ID string to be used as filename
+#     card_input_dir = 'text_files_for_CARD/'
+#     id_string <- paste(df[i,'STUDY_PAT_ID'], df[i,'STUDY_ENC_ID'], df[i,'STUDY_NOTE_ID'], sep="-")
+#     save_path = paste(card_input_dir, id_string, ".txt" , sep="")
+# 
+#     if (file.exists(save_path)) {
+#             print(paste("WARNING:'", normalizePath(save_path), "'already exists. File not saved. Please check your work."))
+#       } else {
+#             write.csv(clincial_note, file=save_path, row.names = FALSE)
+#             print(paste('Note ID saved:', df[i,'STUDY_NOTE_ID']))
+#       }
+#   }
+# }
+# 
+# save_each_record_to_card_file(text.df)
+```
+
+
+
+<!--html_preserve DO NOT CHANGE THIS FOOTER -->
+<div>
+    	<footer><center>
+			<a href="http://www.socr.umich.edu/">SOCR Resource</a>
+				Visitor number <img src="http://counter.digits.net/?counter=SOCR"
+	 			align="middle" border="0" height="20" hspace="4" vspace="2" width="60">
+				<script type="text/javascript">
+					var d = new Date();
+					document.write(" | " + d.getFullYear() + " | ");
+				</script> 
+				<a href="http://socr.umich.edu/img/SOCR_Email.png"><img alt="SOCR Email"
+	 			title="SOCR Email" src="http://socr.umich.edu/img/SOCR_Email.png"
+	 			style="border: 0px solid ;"></a>
+	 		 </center>
+	 	</footer>
+
+	<!-- Start of StatCounter Code -->
+		<script type="text/javascript">
+			var sc_project=5714596; 
+			var sc_invisible=1; 
+			var sc_partition=71; 
+			var sc_click_stat=1; 
+			var sc_security="038e9ac4"; 
+		</script>
+		
+		<script type="text/javascript" src="https://www.statcounter.com/counter/counter.js"></script>
+	<!-- End of StatCounter Code -->
+	
+	<!-- GoogleAnalytics -->
+		<script src="https://www.google-analytics.com/urchin.js" type="text/javascript"> </script>
+		<script type="text/javascript"> _uacct = "UA-676559-1"; urchinTracker(); </script>
+	<!-- End of GoogleAnalytics Code -->
+</div>
+<!--/html_preserve-->

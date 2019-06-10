@@ -1,0 +1,226 @@
+---
+title: "Health Analytics Collaboratory (HAC)"
+subtitle: "<h2><u>Alzheimer's Disease Research, Development, and Health Analytics Project</u></h2>"
+author: "<h3>SOCR/MIDAS (Ivo Dinov)</h3>"
+date: "`r format(Sys.time(), '%B %Y')`"
+tags: [DSPA, SOCR, MIDAS, Big Data, Predictive Analytics] 
+output:
+  html_document:
+    theme: spacelab
+    highlight: tango
+    includes:
+      before_body: SOCR_header.html
+    toc: true
+    number_sections: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+---
+
+# DSPA Mission and Objectives
+This textbook is based on the [HS650: Data Science and Predictive Analytics (DSPA) course](http://predictive.space/) I teach at the University of Michigan. These materials collectively aim to provide learners with a solid foundation of the challenges, opportunities, and strategies for designing, collecting, managing, processing, interrogating, analyzing and interpreting complex health and biomedical datasets. Readers that finish the textbook and successfully complete the examples and assignments will gain unique skills and acquire a tool-chest of methods, software tools, and protocols that can be applied to a broad spectrum of Big Data problems.
+
+* **Vision**: Enable active-learning by integrating driving motivational challenges with mathematical foundations, computational statistics, and modern scientific inference
+* **Values**: Effective, reliable, reproducible, and transformative data-driven discovery supporting open-science
+* **Strategic priorities**: Trainees will develop scientific intuition, computational skills, and data-wrangling abilities to tackle Big biomedical and health data problems. Instructors will provide well-documented R-scripts and software recipes implementing atomic data-filters as well as complex end-to-end predictive big data analytics solutions.
+
+Before diving into the mathematical algorithms, statistical computing methods, software tools, and health analytics covered in the remaining chapters, we will discuss several *driving motivational problems*. These will ground all the subsequent scientific discussions, data modeling, and computational approaches.
+
+# Examples of driving motivational problems and challenges
+
+For each of the studies below, we illustrate several clinically-relevant scientific questions, identify appropriate data sources, describe the types of data elements, and pinpoint various complexity challenges.
+
+## Alzheimer's Disease 
+
+*	Identify the relation between observed clinical phenotypes and expected behavior
+*	Prognosticate future cognitive decline (3-12 months prospectively) as a function of imaging data and clinical assessment (both model-based and model-free machine learning prediction methods will be used)
+*	Derive and interpret the classifications of subjects into clusters using the harmonized and aggregated data from multiple sources
+
+Data Source |           Sample Size/Data Type    |   Summary       
+------------|------------------------------------|-----------------
+[ADNI Archive](http://www.adni-info.org) | Clinical data: demographics, clinical assessments, cognitive assessments; Imaging data: sMRI, fMRI, DTI, PiB/FDG PET; Genetics data: Ilumina SNP genotyping; Chemical biomarker: lab tests, proteomics. Each data modality comes with a different number of cohorts. Generally, $200\le N \le 1200$. For instance, previously conducted ADNI studies with N>500 [ [doi: 10.3233/JAD-150335](https://www.ncbi.nlm.nih.gov/pubmed/26444770), [doi: 10.1111/jon.12252](https://www.ncbi.nlm.nih.gov/pubmed/25940587), [doi: 10.3389/fninf.2014.00041](https://www.ncbi.nlm.nih.gov/pubmed/24795619)] | ADNI provides interesting data modalities, multiple cohorts (e.g., early-onset, mild, and severe dementia, controls) that allow effective model training and validation [NACC Archive](http://www.alz.washington.edu) | Clinical data: treatments, diagnosis, clinical assessments, cognitive tests; Imaging data: sMRI, fMRI; Genetics data: SNP genotypes; Biospecimen: blood, buffy coat, brain tissue; Demographics: family history, phenotypes. This collection includes over 5,000 unique subjects with an average of 6 years of follow-up. Not all data elements/cases are complete | NACC data facilitates the exploration of GWAS and diverse phenotypes. These data provide means to do exploratory neuropathological studies of dementia and cognitive decline, accounting for risk alleles like APOE $\epsilon 4$ and protective alleles APOE $\epsilon 2$
+
+## Parkinson's Disease 
+
+*	Predict the clinical diagnosis of patients using all available data (with and without the UPDRS clinical assessment, which is the basis of the clinical diagnosis by a physician)
+*	Compute derived neuroimaging and genetics biomarkers that can be used to model the disease progression and provide automated clinical decisions support
+*	Generate decision trees for numeric and categorical responses (representing clinically relevant outcome variables) that can be used to suggest an appropriate course of treatment for specific clinical phenotypes
+
+Data Source |           Sample Size/Data Type    |   Summary       
+------------|------------------------------------|-----------------
+[PPMI Archive](http://www.ppmi-info.org) | Demographics: age, medical history, sex; Clinical data: physical, verbal learning and language, neurological and olfactory (University of Pennsylvania Smell Identification Test, UPSIT) tests), vital signs, MDS-UPDRS scores (Movement Disorder; Society-Unified Parkinson's Disease Rating Scale), ADL (activities of daily living), Montreal Cognitive Assessment (MoCA), Geriatric Depression Scale (GDS-15); Imaging data: structural MRI; Genetics data: llumina ImmunoChip (196,524 variants) and NeuroX (covering 240,000 exonic variants) with 100% sample success rate, and 98.7% genotype success rate genotyped for APOE e2/e3/e4. Three cohorts of subjects; Group 1 = {de novo PD Subjects with a diagnosis of PD for two years or less who are not taking PD medications}, N1 = 263; Group 2 = {PD Subjects with Scans without Evidence of a Dopaminergic Deficit (SWEDD)}, N2 = 40; Group 3 = {Control Subjects without PD who are 30 years or older and who do not have a first degree blood relative with PD}, N3 = 127 | The longitudinal PPMI dataset including clinical, biological and imaging data (screening, baseline, 12, 24, and 48 month follow-ups) may be used conduct model-based predictions as well as model-free classification and forecasting analyses
+
+## Drug and substance use 
+
+*	Is the Risk for Alcohol Withdrawal Syndrome (RAWS) screen a valid and reliable tool for predicting alcohol withdrawal in an adult medical inpatient population?
+*	What is the optimal cut-off score from the AUDIT-C to predict alcohol withdrawal based on RAWS screening?
+*	Should any items be deleted from, or added to, the RAWS screening tool to enhance its performance in predicting the emergence of alcohol withdrawal syndrome in an adult medical inpatient population?
+
+Data Source |           Sample Size/Data Type    |   Summary       
+------------|------------------------------------|-----------------
+MAWS Data / UMHS EHR / [WHO AWS Data](http://apps.who.int/gho/data/node.main-amro.A1311?lang=en)	| Scores from Alcohol Use Disorders Identification Test-Consumption (AUDIT-C) [49], including dichotomous variables for any current alcohol use (AUDIT-C, question 1), total AUDIT-C score > 8, and any positive history of alcohol withdrawal syndrome (HAWS) | ~1,000 positive cases per year among 10,000 adult medical inpatients, % RAWS screens completed, % positive screens, % entered into MAWS protocol who receive pharmacological treatment for AWS, % entered into MAWS protocol without a completed RAWS screen | Blood alcohol level (BAL) on admission, urine drug screen, mean corpuscular volume (MCV), liver enzymes (ALT, AST, CDT, GGTP), cigarette use, other tobacco and/or nicotine use, including e-cigarettes, comorbid medical, psychiatric, and/or other substance use diagnoses
+ 
+
+## Amyotrophic lateral sclerosis  
+
+* Identify the most highly-significant variables that have power to jointly predict the progression of ALS (in terms of clinical outcomes like [ALSFRS](http://www.outcomes-umassmed.org/ALS/sf12.aspx) and muscle function)
+* Provide a decision tree prediction of adverse events based on subject phenotype and 0-3 month clinical assessment changes
+
+Data Source |           Sample Size/Data Type    |   Summary       
+------------|------------------------------------|-----------------
+[ProAct Archive](http://www.ALSdatabase.org) | Over 100 clinical variables are recorded for all subjects including: Demographics: age, race, medical history, sex; Clinical data:  Amyotrophic Lateral Sclerosis Functional Rating Scale (ALSFRS), adverse events, onset_delta, onset_site, drugs use (riluzole)	The PRO-ACT training dataset contains clinical and lab test information of 8,635 patients. Information of 2,424 study subjects with valid gold standard ALSFRS slopes will be used in out processing, modeling and analysis | The time points for all longitudinally varying data elements will be aggregated into signature vectors. This will facilitate the modeling and prediction of ALSFRS slope changes over the first three months (baseline to month 3)
+
+# Normal Brain Visualization
+
+The [SOCR Brain Visualization tool](http://socr.umich.edu/HTML5/BrainViewer) has preloaded sMRI, ROI labels, and fiber track models for a normal brain. It also allows users to drag-and-drop their data into the browser to visualize and navigate through the stereotactic data (including imaging, parcellations and tractography).
+
+![](http://socr.umich.edu/Udall_PD/images/UdallPD_Carousel_01.png)
+![](http://socr.umich.edu/Udall_PD/images/UdallPD_Carousel_02.png)
+
+# Neurodegeneration
+
+A recent study of [Structural Neuroimaging in Alzheimer's Disease](https://www.ncbi.nlm.nih.gov/pubmed/26444770) illustrates the Big Data challenges in modeling complex neuroscientific data. Specifically, 808 [ADNI](http://adni.loni.usc.edu/) subjects were divided into 3 groups: 200 subjects with Alzheimer's disease (AD), 383 subjects with mild cognitive impairment (MCI), and 225 asymptomatic normal controls (NC). Their sMRI data were parcellated using [BrainParser](http://www.loni.usc.edu/Software/BrainParser), and the 80 most important neuroimaging biomarkers were extracted using the global shape analysis Pipeline workflow. Using a pipeline implementation of Plink, the authors obtained 80 SNPs highly-associated with the imaging biomarkers. The authors observed significant correlations between genetic and neuroimaging phenotypes in the 808 ADNI subjects. These results suggest that differences between AD, MCI, and NC cohorts may be examined by using powerful joint models of morphometric, imaging and genotypic data. 
+
+![](http://www.socr.umich.edu/people/dinov/2017/Spring/DSPA_HS650/images/AD_Moon_Dinov_2016_F1.png)
+
+# Genomics computing
+
+## Genetic Forensics - 2013-2016 Ebola Outbreak
+
+This [HHMI disease detective activity](http://www.hhmi.org/biointeractive/ebola-disease-detectives) illustrates genetic analysis of sequences of Ebola viruses isolated from patients in Sierra Leone during the Ebola outbreak of 2013-2016. Scientists track the spread of the virus using the fact that most of the genome is identical among individuals of the same species, most similar for genetically related individual, and more different as the hereditary distance increases. DNA profiling capitalizes on these genetic differences. In particular, in regions of noncoding DNA, which is DNA that is not transcribed and translated into a protein. Variations in noncoding regions impact less individual's traits. Such changes in noncoding regions may be immune to natural selection.  DNA variations called **short tandem repeats (STRs)** are comprised on short bases, typically 2-5 bases long, that repeat multiple times. The repeat units are found at different locations, or loci, throughout the genome. Every STR has multiple alleles. These allele variants are defined by the **number of repeat units** present or by the **length of the repeat sequence**. STR are surrounded by non-variable segments of DNA known as flanking regions. The STR allele in the Figure below could be denoted by "6", as the repeat unit (GATA) repeats 6 times, or as 70 base pairs (bps) because its length is 70 bases in length, including the starting/ending flanking regions. Different alleles of the same STR may correspond to different number of GATA repeats, with the same flanking regions.
+
+<div style="width:65%; margin:0 auto;">
+![](http://www.socr.umich.edu/people/dinov/2017/Spring/DSPA_HS650/images/HHMI_BioInteractive_Ebola.png)
+</div>
+
+## Next Generation Sequence (NGS) Analysis
+
+Whole-genome and exome sequencing include essential clues for identifying genes responsible for simple Mendelian inherited disorders. This [paper proposed methods can be applied to complex disorders based on population genetics](http://www.mdpi.com/2073-4425/3/3/545). Next generation sequencing (NGS) technologies include bioinformatics resources to analyze the dense and complex sequence data. The Graphical Pipeline for Computational Genomics (GPCG) performs the computational steps required to analyze NGS data. The GPCG implements flexible workflows for basic sequence alignment, sequence data quality control, single nucleotide polymorphism analysis, copy number variant identification, annotation, and visualization of results. Applications of NGS analysis provide clinical utility for identifying miRNA signatures in diseases. Enabling hypotheses testing about the functional role of variants in the human genome will help to pinpoint the genetic risk factors many diseases (e.g., neuropsychiatric disorders).
+
+![](http://www.socr.umich.edu/people/dinov/2017/Spring/DSPA_HS650/images/GPCG_Torri_Dinov.png)  
+
+# Neuroimaging-genetics 
+
+A [computational infrastructure for high-throughput neuroimaging-genetics (doi: 10.3389/fninf.2014.00041)](http://journal.frontiersin.org/article/10.3389/fninf.2014.00041/full) facilitates the data aggregation, harmonization, processing and interpretation of multisource imaging, genetics, clinical and cognitive data. A unique feature of this architecture is the graphical user interface to the Pipeline environment. Through its client-server architecture, the Pipeline environment provides a graphical user interface for designing, executing, monitoring validating, and disseminating of complex protocols that utilize diverse suites of software tools and web-services. These pipeline workflows are represented as portable XML objects, which transfer the execution instructions and user specifications from the client user machine to remote pipeline servers for distributed computing. Using Alzheimer's and Parkinson's data, this study provides examples of translational applications using this infrastructure
+
+![](http://www.socr.umich.edu/people/dinov/2017/Spring/DSPA_HS650/images/LONI_Cranium_2014.png)
+
+# Common Characteristics of **Big (Biomedical and Health) Data** 
+Software developments, student training, utilization of Cloud or IoT service platforms, and methodological advances associated with Big Data Discovery Science all present existing opportunities for learners, educators, researchers, practitioners and policy makers, alike. A review of many biomedical, health informatics and clinical studies suggests that there are indeed common characteristics of complex big data challenges. For instance, imagine analyzing observational data of thousands of Parkinson's disease patients based on tens-of-thousands of signature biomarkers derived from multi-source imaging, genetics, clinical, physiologic, phenomics and demographic data elements. IBM had defined the qualitative characteristics of Big Data as 4V's: **Volume, Variety, Velocity** and **Veracity** (there are additional V-qualifiers that can be added).
+
+More recently ([PMID:26998309](https://www.ncbi.nlm.nih.gov/pubmed/26998309)) we defined a constructive characterization of Big Data that clearly identifies the methodological gaps and necessary tools:
+
+BD Dimensions | Tools
+--------------|-------
+Size | Harvesting and management of vast amounts of data
+Complexity | Wranglers for dealing with heterogeneous data
+Incongruency | Tools for data harmonization and aggregation
+Multi-source | Transfer and joint modeling of disparate elements
+Multi-scale | Macro to meso to micro scale observations 
+Time | Techniques accounting for longitudinal patterns in the data
+Incomplete | Reliable management of missing data
+
+# Data Science
+*Data science* is an emerging new field that (1) is extremely transdisciplinary - bridging between the theoretical, computational, experimental, and biosocial areas, (2) deals with enormous amounts of complex, incongruent and dynamic data from multiple sources, and (3) aims to develop algorithms, methods, tools and services capable of ingesting such datasets and generating semi-automated decision support systems. The latter can mine the data for patterns or motifs, predict expected outcomes, suggest clustering or labeling of retrospective or prospective observations, compute data signatures or fingerprints, extract valuable information, and offer evidence-based actionable knowledge. Data science techniques often involve data manipulation (wrangling), data harmonization and aggregation, exploratory or confirmatory data analyses, predictive analytics, validation and fine-tuning. 
+
+# Predictive Analytics
+*Predictive analytics* is the process of utilizing advanced mathematical formulations, powerful statistical computing algorithms, efficient software tools and services to represent, interrogate and interpret complex data. As its name suggests, a core aim of predictive analytics is to forecast trends, predict patterns in the data, or prognosticate the process behavior either within the range or outside the range of the observed data (e.g., in the future, or at locations where data may not be available). In this context, *process* refers to a natural phenomenon that is being investigated by examining proxy data. Presumably, by collecting and exploring the intrinsic data characteristics, we can tracks the behavior and unravel the underlying mechanism of the system.
+
+The fundamental goal of predictive analytics is to identify relationships, associations, arrangements or motifs in the dataset, in terms of space, time, features (variables) that may reduce the dimensionality of the data, i.e., its complexity. Using these process characteristics, predictive analytics may predict unknown outcomes, produce estimations of likelihoods or parameters, generate classification labels, or contribute other aggregate or individualized forecasts. We will discuss how can the outcomes of these predictive analytics be refined, assessed and compared, e.g., between alternative methods. The underlying assumptions of the specific predictive analytics technique determine its usability, effect the expected accuracy, and guide the (human) actions resulting from the (machine) forecasts. In this textbook, we will discuss supervised and unsupervised, model-based and model-free, classification and regression, as well as deterministic, stochastic, classical and machine learning-based techniques for predictive analytics. The type of the expected outcome (e.g., binary, polytomous, probability, scalar, vector, tensor, etc.) determines if the predictive analytics strategy provides prediction, forecasting, labeling, likelihoods, grouping or motifs.
+
+# High-throughput Big Data Analytics
+
+The [Pipeline Environment](http://pipeline.loni.usc.edu) provides a large tool chest of software and services that can be integrated merged and processed. The [Pipeline workflow library](http://pipeline.loni.usc.edu/explore/library-navigator/) and the [workflow miner](http://pipeline.loni.usc.edu/products-services/workflow-miner/) illustrate much of the functionality that is available. A [Java-based](http://pipeline.loni.usc.edu/products-services/pws/) and an [HTML5 webapp based](http://pipeline.loni.usc.edu/products-services/webapp/) graphical user interfaces provide access to a powerful 4,000 core grid compute server.
+
+![](http://www.socr.umich.edu/people/dinov/2017/Spring/DSPA_HS650/images/PPMI_BDDS_GSA_PipeProtocol.png)
+
+# Examples of data repositories, archives and services
+
+There are many sources of data available on the Internet. A number of them provide open-access to the data based on FAIR (Findable, Accessible, Interoperable, Reusable) principles. Below are examples of open-access data sources that can be used to test the techniques presented in the textbook. We demonstrate the tasks of retrieval, manipulation, processing, analytics and visualization using example datasets from these archives.
+
+* [SOCR Wiki Data](http://wiki.socr.umich.edu/index.php/SOCR_Data)
+* [SOCR Canvas datasets](https://umich.instructure.com/courses/38100/files/folder/data)
+* [SOCR Case-Studies](https://umich.instructure.com/courses/38100/files/folder/Case_Studies)
+* [XNAT](https://central.xnat.org/)
+* [IDA](http://ida.loni.usc.edu/)
+* [NIH dbGaP](https://dbgap.ncbi.nlm.nih.gov/)
+* [Data.gov](http://data.gov/)
+
+# Responsible Data Science and Ethical Predictive Analytics
+
+In addition to being data-literate and skilled artisans, all data scientists, quantitative analysts, and informaticians need to be aware of certain global societal norms and exhibit professional work ethics that ensure the appropriate use, result reproducibility, unbiased reporting, as well as expected and unanticipated interpretations of data, analytical methods, and novel technologies. Examples of this basic etiquette include (1) promoting FAIR (findable, accessible, interoperable, reusable, and reproducible resource) sharing principles, (2) ethical conduct of research, (3) balancing and explicating potential benefits and probable detriments of findings, (4) awareness of relevant legislation, codes of practice, and respect for privacy, security and confidentiality of sensitive data, and (5) document provenance, attributions and longevity of resources.
+
+## Promoting FAIR resource sharing 
+The FAIR (findable, accessible, interoperable, reusable, and reproducible) resource sharing principles provide guiding essentials for appropriate development, deployment, use, management, and stewardship of data, techniques, tools, services, and information dissemination. 
+
+## Research ethics
+Ethical data science and predictive analytics research demands responsible scientific conduct and integrity in all aspects practice of scientific investigation and discovery. All analysts should be aware of, and practice, established professional norms and ethical principles in planning, designing, implementing, executing, and assessing activities related to data-driven scientific research.
+
+## Understanding the benefits and detriments of analytical findings
+Evidence and data-driven discovery is often bound to generate both questions and answers, some of which may be unexpected, undesired, or detrimental. Quantitative analysts are responsible to validating all their results as well as balancing and explicating all potential benefits and enumerating all probable detriments of positive and negative findings.
+
+## Regulatory and practical issues in handling sensitive data
+Decisions on security, privacy, and confidentiality of sensitive data collected and managed by data governors, manipulated by quantitative analysts, and interpreted by policy and decision makers is not trivial. The large number of people, devices, algorithms, and services that are within arms-length of the raw data suggests a multi-tier approach for sensible protection and security of sensitive information like personal health, biometric, genetic, and proprietary data. Data security, privacy, and confidentiality of sensitive information should always be protected throughout the data life cycle. This may require preemptive, on-going, and post-hoc analyses to identify and patch potential vulnerabilities. Data utilization and potential risks always tradeoff. Neither of the extremes is practical, sustainable, or effective.
+
+## Resource provenance and longevity
+The digitalization of human experiences, the growth of data science, and the promise of predictive have led to enormous societal investment, excitement, and anticipation the vast amounts of information that is ubiquitously will churn useful predictions and dynamic insights. Proper recording of the data, algorithmic, scientific, computational, and human factors involved in these forecasts represents a critical component of data science and its essential contributions to knowledge.
+
+## Examples of inappropriate, fake, or malicious use of resources
+Each of the complementary spaces of *appropriate* and *inappropriate* use of data science and predictive analytics resources are vast. The sections above outlined some of the guiding principles for ethical, respectful, appropriate, and responsible data-driven analytics and factual reporting. Below are some examples illustrating inappropriate use of data, resources, information, or knowledge to intentionally or unintentionally gain unfair advantage, spread fake news, misrepresent findings, or detrimental socioeconomic effects.
+
+*	Attempts to re-identify sensitive information or circumvent regulatory policies, common sense norms, or agreements. For instance, [Big data and advanced analytics were employed to re-identify the Massachusetts Governor William Weld's medical record]( https://fpf.org/wp-content/uploads/The-Re-identification-of-Governor-Welds-Medical-Information-Daniel-Barth-Jones.pdf) using openly released insurance dataset stripped of direct personal identifiers. 
+*	Calibrated analytics that report findings relative to status-quo alternatives and level setting expected and computed inference in the context of the application domain. For example, ignoring placebo effects, methodological assumptions, potential conflicts and biases, randomization of unknown effects, and other strategies may significantly impact the efficacy of data-driven studies.
+*	Unintended misuse of resource access may be common practice. In 2014, an [Uber employee ignored the company's policies and used his access to track the location of a journalist](https://nypost.com/2017/08/15/uber-settles-federal-probe-over-god-view-spy-software/) who was delayed for an Uber interview. Obviously, tracking people without their explicit consent is unethical, albeit it represented an innovative use of the available technology to answer a good question.
+*	Gaming the system for personal gain represents an intentional misuse of resources. Insider trading and opportunistic wealth management represent such examples. In 2015, an [analyst at Morgan Stanley inappropriately downloaded 10% of their account data](https://www.reuters.com/article/us-morgan-stanley-data/morgan-stanley-says-wealth-management-employee-stole-client-data-idUSKBN0KE1AY20150106), which was used for personal enrichment.
+*	There are plenty of examples of [misuse of analytical strategies to fake the results or strengthen a point beyond the observed evidence]( https://en.wikipedia.org/wiki/Misuse_of_statistics) and [inappropriate use of information and advanced technology]( https://www.bbc.com/bitesize/guides/zt8qtfr/).  
+*	Big data is naturally prone to *innocent errors*, e.g., selection bias, methodological development and applications, computational processing, empirical estimation instability, misunderstanding of data formats and metadata understanding, as well as *malicious manipulations*.
+*	Collecting, managing and processing irrelevant Big Data may yield unnecessary details, skew the understanding of the phenomenon, or distract from the main discoveries. In these situations, there may be substantial socioeconomic costs, as well as negative returns associated with lost opportunities.
+
+# DSPA Expectations
+The heterogeneity of data science makes it difficult to identify a complete and exact list of prerequisites necessary to succeed in learning all the appropriate methods. However, the reader is strongly encouraged to glance over the [preliminary prerequisites](http://www.socr.umich.edu/people/dinov/courses/DSPA_Prereqs.html), the [self-assessment pretest and remediation materials](http://www.socr.umich.edu/people/dinov/courses/DSPA_Pretest.html), and the [outcome competencies](http://www.socr.umich.edu/people/dinov/courses/DSPA_Competencies.html). Throughout this journey, it is useful to *remember the following points*:
+
+* You *don't have to* satisfy all prerequisites, be versed in all mathematical foundations, have substantial statistical analysis expertise, or be experienced programmer.
+* You *don't have to complete all chapters and sections* in the order they appear in the [DSPA Topics Flowchart](http://www.socr.umich.edu/people/dinov/courses/DSPA_Topics.html). Completing one, or several of the [suggested pathways](http://www.socr.umich.edu/people/dinov/courses/DSPA_FlowChart.html) may be sufficient for many readers.
+* The *DSPA textbook aims* to expand the trainees' horizons, improve the understanding, enhance the skills, and provide a set of advanced, validated, and practice-oriented code, scripts, and protocols. 
+* To varying degrees, readers will develop abilities to skillfully utilize the **tool chest** of resources provided in the DSPA textbook. These resources can be revised, improved, customized and applied to other biomedicine and biosocial studies, as well as to Big Data predictive analytics challenges in other disciplines.
+* The DSPA *materials will challenge most readers*. When going gets tough, seek help, engage with fellow trainees, search for help on the web, communicate via DSPA discussion forum/chat, review references and supplementary materials. Be proactive! Remember you will gain, but it will require commitment, prolonged emersion, hard work, and perseverance. If it were easy, its value would be compromised. 
+* When covering some chapters, few may be *underwhelmed or bored*. You can skim over chapters/sections you are familiar with and move forward to the next topic. Still, it's worth trying the corresponding assignments to ensure you have a firm grasp of the material and your technical abilities are sound.
+* Although the *return on investment* (e.g., time, effort) may vary between readers. Those that complete the DSPA textbook will discover something new, acquire some advanced skills, learn novel data analytic protocols, or conceive of a cutting-edge idea. 
+* The complete R code (R markdown) for all examples and demonstrations presented in the textbook are available as [electronic supplement](http://www.socr.umich.edu/people/dinov/2017/Spring/DSPA_HS650/DSPA_Topics.html).
+* The instructor acknowledges that these *materials may be improved*. If you discover problems, typos, errors, inconsistencies, or other problems, please contact us (`DSPA.info @ umich.edu`) to correct, expand, or polish the resources, accordingly. If you have alternative ideas, suggestions for improvements, optimized code, interesting data and case-studies, or any other refinements, please send these along, as well. All suggestions and critiques will be carefully reviewed and potentially incorporated in revisions or new editions.
+
+<!--html_preserve-->
+<div>
+    	<footer><center>
+			<a href="http://www.socr.umich.edu/">SOCR Resource</a>
+				Visitor number <img src="http://counter.digits.net/?counter=SOCR"
+	 			align="middle" border="0" height="20" hspace="4" vspace="2" width="60">
+				<script type="text/javascript">
+					var d = new Date();
+					document.write(" | " + d.getFullYear() + " | ");
+				</script> 
+				<a href="http://socr.umich.edu/img/SOCR_Email.png"><img alt="SOCR Email"
+	 			title="SOCR Email" src="http://socr.umich.edu/img/SOCR_Email.png"
+	 			style="border: 0px solid ;"></a>
+	 		 </center>
+	 	</footer>
+
+	<!-- Start of StatCounter Code -->
+		<script type="text/javascript">
+			var sc_project=5714596; 
+			var sc_invisible=1; 
+			var sc_partition=71; 
+			var sc_click_stat=1; 
+			var sc_security="038e9ac4"; 
+		</script>
+		
+		<script type="text/javascript" src="https://www.statcounter.com/counter/counter.js"></script>
+	<!-- End of StatCounter Code -->
+	
+	<!-- GoogleAnalytics -->
+		<script src="https://www.google-analytics.com/urchin.js" type="text/javascript"> </script>
+		<script type="text/javascript"> _uacct = "UA-676559-1"; urchinTracker(); </script>
+	<!-- End of GoogleAnalytics Code -->
+</div>
+<!--/html_preserve-->

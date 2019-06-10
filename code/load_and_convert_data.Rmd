@@ -1,0 +1,135 @@
+---
+title: "Health Analytics Collaboratory (HAC) - University of Michigan"
+subtitle: "<h2><u>HAC Alzheimer's Disease Digital Health Analytics Project: Loading and Converting Data Files </u></h2>"
+author: "<h3>Ivo Dinov, Cooper Stansbury, Haiyin Liu, Bingxin Chen</h3>"
+date: "`r format(Sys.time(), '%B %Y')`"
+tags: [HAC, DSPA, SOCR, MIDAS, Big Data, Predictive Analytics, Computable Phenotypes] 
+output:
+  html_document:
+    theme: spacelab
+    highlight: tango
+    includes:
+      before_body: SOCR_header.html
+    toc: true
+    number_sections: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+---
+
+This HAC Project is focused on Alzheimer's Disease & Computable Dementia Phenotypes 
+
+ - [MBOX](https://umich.app.box.com/folder/74508633481)
+ - [Canvas](https://umich.instructure.com/courses/137434)
+
+# Session Information and Configuration
+This section outputs information regarding loaded dependencies and OS configuration that may help in trouble-shooting. 
+
+```{r}
+sessionInfo()
+```
+
+```{r}
+sapply(c('repr', 'IRdisplay', 'IRkernel'), function(p) paste(packageVersion(p)))
+```
+
+# Data Conversions
+This section contains code "blocks"" for saving data in different file formats for ingestion into different downstream programs. The source code for these functions is in the file `code/load_and_convert_functions.R` for re-use in analysis notebooks. The following function loads data from the `code/load_and_convert_functions.R` file to the current workspace.
+
+```{r}
+source('code/load_and_convert_functions.R')
+```
+
+
+Below is a bash shell commad to print the functions in `code/load_and_convert_functions.R` to the console:
+
+```{bash}
+# cat code/load_and_convert_functions.R
+```
+
+
+An example of loading the sample data into a `data.frame` from a MS Excel file:
+
+```{r}
+df <- read_xlsx_from_path(filepath = 'data/DS_PreprocessedAnonymized_Text.xlsx')
+```
+
+## R Objects
+R changes rapidly. File types specific to R may not be robust to future changes in technology. ** Note on `save`:** the R function `save` stores both the object and the name of the object. This is important when loading objects back into R. `.Rdata` (sometimes `.Rda`) files are specific to the R environment. They can store arbitrary numbers of objects in a single file. For more documentation I suggest: 
+[YaRrr/rdata-files](https://bookdown.org/ndphillips/YaRrr/rdata-files.html).
+
+**Note for OSX Users:** The extension may matter. We have chosen `.Rdata`. Reference: [error-in-gzfilefile-wb-cannot-open-the-connection-or-compressed-file](https://stackoverflow.com/questions/15363076/error-in-gzfilefile-wb-cannot-open-the-connection-or-compressed-file).
+
+The follow block demonstrates saving both `.Rdata` or `.rds` format objects.
+
+```{r}
+save_rData(df, 'sample.Rdata')
+save_rData(df, 'sample.rds')
+```
+
+## Non-R Objects
+Below are a few examples of saving data in formats intended for other statistical software. Many of these blocks require the library `foreign` or `rio` to be installed. **NOTE:** `rio` has much easier syntax and saves standalone files. We have defaulted to it here.
+
+These packages can be installed via the code block below. It is suggested that one read the library documentation when working with file formats for other statistical software: [https://www.rdocumentation.org/packages/foreign/versions/0.8-71](https://www.rdocumentation.org/packages/foreign/versions/0.8-71).
+
+```{r}
+# # installs required package on local machine.
+# install.packages('foreign')
+# library(foreign)
+
+# install.packages('rio')
+# library(rio)
+```
+
+
+### CSV
+This is the most robust long-term file storage format. Not that there are several possible arguments for `write.csv()` that may be necessary to specify depending on downstream requirements.
+```{r}
+save_csv(df, 'sample.csv')
+```
+
+### SAS
+Create a version of the file for SAS. Note, this requires renaming, or dropping improperly named columns.
+
+```{r}
+save_SAS_data(df, 'sample.SAS')
+```
+
+
+<!--html_preserve DO NOT CHANGE THIS FOOTER -->
+<div>
+    	<footer><center>
+			<a href="http://www.socr.umich.edu/">SOCR Resource</a>
+				Visitor number <img src="http://counter.digits.net/?counter=SOCR"
+	 			align="middle" border="0" height="20" hspace="4" vspace="2" width="60">
+				<script type="text/javascript">
+					var d = new Date();
+					document.write(" | " + d.getFullYear() + " | ");
+				</script> 
+				<a href="http://socr.umich.edu/img/SOCR_Email.png"><img alt="SOCR Email"
+	 			title="SOCR Email" src="http://socr.umich.edu/img/SOCR_Email.png"
+	 			style="border: 0px solid ;"></a>
+	 		 </center>
+	 	</footer>
+
+	<!-- Start of StatCounter Code -->
+		<script type="text/javascript">
+			var sc_project=5714596; 
+			var sc_invisible=1; 
+			var sc_partition=71; 
+			var sc_click_stat=1; 
+			var sc_security="038e9ac4"; 
+		</script>
+		
+		<script type="text/javascript" src="https://www.statcounter.com/counter/counter.js"></script>
+	<!-- End of StatCounter Code -->
+	
+	<!-- GoogleAnalytics -->
+		<script src="https://www.google-analytics.com/urchin.js" type="text/javascript"> </script>
+		<script type="text/javascript"> _uacct = "UA-676559-1"; urchinTracker(); </script>
+	<!-- End of GoogleAnalytics Code -->
+</div>
+<!--/html_preserve-->
+
+

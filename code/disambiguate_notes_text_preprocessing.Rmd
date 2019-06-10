@@ -240,14 +240,14 @@ perform_substitions <- function(sentence, abbreviation_list, toPrint=TRUE) {
       long_form_abbr <- paste(" ", parsed_abbr[2], " ", sep="")
     
       if (toPrint) {
-          print(paste('detected:', detected_abbr, 'long form:', long_form_abbr)) 
+        print(paste('detected:', detected_abbr, 'long form:', long_form_abbr)) 
       }
       
       new_sentence <- sub(detected_abbr, long_form_abbr, new_sentence)
   }
   
   if (toPrint) {
-      print(paste('disambiguated sentence:', new_sentence)) 
+    print(paste('disambiguated sentence:', new_sentence)) 
   }
   return(new_sentence)
 }
@@ -295,9 +295,9 @@ disambiguate_note_contents <- function(row, toPrint=TRUE) {
 
         # get a slice with all abbreviations predicted for substituion
         if ((start_slice <= end_slice) & (start_slice < length(disambiguation_predictions))) {
-            abbreviation_predictions <- disambiguation_predictions[start_slice:end_slice]
+          abbreviation_predictions <- disambiguation_predictions[start_slice:end_slice]
         } else{
-            abbreviation_predictions <- NULL
+          abbreviation_predictions <- NULL
         }
         
         if (toPrint) {
@@ -320,8 +320,8 @@ disambiguate_note_contents <- function(row, toPrint=TRUE) {
         total_abbreviations <- total_abbreviations + num_abbreviations_detected
         
         if (toPrint) {
-              print(paste('total abbreviations detected: ', num_abbreviations_detected))
-          }
+          print(paste('total abbreviations detected: ', num_abbreviations_detected))
+        }
      } # end if current index is flag
   } # end for each index
   return(disamgiguated_note)
@@ -358,7 +358,7 @@ names(text.df)
 Write data out to file to inspect.
 
 ```{r}
-# save_csv(text.df, 'compare_disambiguation_results.csv')
+save_csv(text.df, 'data/', 'compare_disambiguation_results.csv')
 ```
 
 
@@ -434,11 +434,7 @@ head(text.df)
 We save the results to disk for empirical validation and inspection:
 
 ```{r}
-# today_date = format(Sys.time(), "%m%d%Y")
-# filename = "compare_disambiguation_and_preprocessing.csv" # note, this needs to be changed
-# csv_save_path = paste("data/", today_date, filename , sep="")
-# 
-# write.csv(text.df, file=csv_save_path)
+# save_csv(text.df, 'data/', 'compare_disambiguation_and_preprocessing.csv.csv')
 ```
 
 
@@ -463,6 +459,18 @@ get_shortest_document_length <- function(doc_dtm) {
 get_shortest_document_length(doc_dtm)
 ```
 
+## Quick Descriptive Peek
+
+Here we look in the document term matrix for positive correlation with the word 'memory'. See anything interesting?
+
+```{r}
+findAssocs(doc_dtm, "memory", corlimit = 0.75)
+```
+
+```{r}
+findAssocs(doc_dtm, "dementia", corlimit = 0.5)
+```
+
 ```{r}
 findFreqTerms(doc_dtm, lowfreq = 50) # look at terms that appear at least 25 times
 ```
@@ -470,60 +478,88 @@ findFreqTerms(doc_dtm, lowfreq = 50) # look at terms that appear at least 25 tim
 ## Create tf-idf object 
 
 ```{r}
-dtm.tfidf <- DocumentTermMatrix(doc_corpus, control = list(weighting=weightTfIdf))
-dtm.tfidf$dimnames$Docs <- as.character(text.df$STUDY_NOTE_ID)
+build_tfidf_matrix <- function(corpus, ID_vector) {
+  # 'fuction to return a new tf_idf object
+  # '@corpus: a corpus object to use to create the tf_idf mat
+  # '@ID_vector: vector of document IDs to add to tf_idf matrix
+  
+  dtm.tfidf <- DocumentTermMatrix(corpus, control = list(weighting=weightTfIdf))
+  dtm.tfidf$dimnames$Docs <- as.character(ID_vector)
+  return(dtm.tfidf)
+}
+
+dtm.tfidf <- build_tfidf_matrix(doc_corpus, text.df$STUDY_NOTE_ID)
 ```
 
 
 ## Convert tf_idf object to `data.frame` and pivot so that each term is a column. Important reference: [questions/8161836](https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe).
 
 ```{r}
-dtm.tfidf_long <- tidy(dtm.tfidf, row_names=dtm.tfidf$dimnames$Docs, col_names=dtm.tfidf$dimnames$Terms)
-dtm.tfidf_df <- dcast(dtm.tfidf_long, document ~ term , value.var = 'count' )
-dtm.tfidf_df <- dtm.tfidf_df %>% replace(is.na(.), 0) # this is slow
-colnames(dtm.tfidf_df)[colnames(dtm.tfidf_df)=="document"] <- "STUDY_NOTE_ID"
+transpose_tf_idf_mat <- function(tf_idf_mat) {
+  # ' function to pivot matrix so that it may be joined to the original matrix as new colum vectors
+  # '@tf_idf_mat: tf idf matrix to trabnsform
+  
+  dtm.tfidf_long <- tidy(tf_idf_mat, row_names=dtm.tfidf$dimnames$Docs, col_names=dtm.tfidf$dimnames$Terms)
+  
+  # avoid possible conflicts with the word 'document'
+  colnames(dtm.tfidf_long)[colnames(dtm.tfidf_long)=="document"] <- 'document_id'
+  
+  dtm.tfidf_df <- dcast(dtm.tfidf_long, document_id ~ term , value.var = 'count' )
+  # replace uncomputed values with 0
+  dtm.tfidf_df <- dtm.tfidf_df %>% replace(is.na(.), 0) # this is slow
+  return(dtm.tfidf_df)
+}
+
+dtm.tfidf_df <- transpose_tf_idf_mat(dtm.tfidf)
 ```
 
 
 ```{r}
-dtm.tfidf_df <- dtm.tfidf_df[, !duplicated(colnames(dtm.tfidf_df))] # remove duplicate columns
+find_duplicate_columns <- function(tf_idf_dataframe) {
+  # 'function to print/remove duplicate columns
+  # '@tf_idf_dataframe: data.frame to check for duplicate columns
+  # '@remove_dupes: boolean flag. If TRUE the duplicare columns will be stripped
+  
+  # duplicates <- tf_idf_dataframe[, !duplicated(colnames(tf_idf_dataframe))]
+  duplicates <- colnames(tf_idf_dataframe)[duplicated(colnames(tf_idf_dataframe))]
+  
+  
+  print(paste('total unique columns in tf_idf:', length(unique(names(tf_idf_dataframe)))))
+  print(paste('total columns in tf_idf:', length(names(tf_idf_dataframe))))
+  print(paste('duplicate columns in tf_idf:', unlist(duplicates)))
+}
 
-sum(duplicated(colnames(dtm.tfidf_df)))
-# dtm.tfidf_df[duplicated(lapply(dtm.tfidf_df, summary))]
+find_duplicate_columns(dtm.tfidf_df)
 ```
 
-
-## Add term counts back to original `data.frame` as new variable.
-
+## Add term counts back to original `data.frame` as new variables.
 
 ```{r}
-########################## TODO ########################## 
-# Check this for errors
-# Check this for correctness
-# maybe try cbind? # new_features_df <- cbind(text.df, dtm.tfidf_df)
-########################## TODO ########################## 
-
 new_features_df <- merge(x = text.df,
                          y = dtm.tfidf_df,
-                         by.y=c('STUDY_NOTE_ID'),
                          by.x=c('STUDY_NOTE_ID'),
+                         by.y=c('document_id'),
                          all.x = TRUE)
 head(new_features_df)
 ```
 
+Sanity checks
 
 ```{r}
-ncol(new_features_df) # expect 104
+ncol(new_features_df) # expect many
+```
+
+```{r}
+nrow(new_features_df) # expect 104
 ```
 
 
-## Quick Descriptive Peek
-
-Here we look in the document term matrix for positive correlation with the word stem `memori`. See anything interesting?
+Save the resulting file (note that there are other methods for doing this).
 
 ```{r}
-findAssocs(doc_dtm, "memori", corlimit = 0.9)
+save_csv(new_features_df, 'data/', 'new_feature_extraction.csv')
 ```
+
 
 ## Remove Sparse Terms
 

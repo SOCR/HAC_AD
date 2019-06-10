@@ -25,8 +25,8 @@ output/*
 .Rapp.history
 
 # Session Data files
-.RData
-.Rproj
+*.RData
+*.Rproj
 
 # Example code in package build process
 *-Ex.R

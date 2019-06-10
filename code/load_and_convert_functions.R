@@ -59,23 +59,25 @@ read_xlsx_from_path <- function(filepath) {
 }
 
 
-save_rData <- function(rObject, filename) {
+save_rData <- function(rObject, dir, filename) {
   # 'function to save an RData object
   # '@rObject: object to save
+  # '@dir: directory, including slash
   # '@filename: a name for the file, will be automatically appeneded with current date
   today_date = format(Sys.time(), "%m%d%Y")
-  save_path = paste(today_date, "-", filename , sep="")
+  save_path = paste(dir, today_date, "-", filename , sep="")
   check_when_save(save_path)
   save(rObject, file = save_path, precheck=TRUE)
 }
 
 
-save_csv <- function(rObject, filename) {
+save_csv <- function(rObject, dir, filename) {
   # 'function to save a csv file
   # '@rObject: object to save
+  # '@dir: directory, including slash
   # '@filename: a name for the file, will be automatically appeneded with current date
   today_date = format(Sys.time(), "%m%d%Y")
-  save_path = paste(today_date, "-", filename , sep="")
+  save_path = paste(dir, today_date, "-", filename , sep="")
   check_when_save(save_path)
   write.csv(rObject, 
             file=save_path,
@@ -84,9 +86,10 @@ save_csv <- function(rObject, filename) {
 }
 
 
-save_SAS_data <- function(rObject, filename) {
+save_SAS_data <- function(rObject, dir, filename) {
   # 'function to save data as a SAS object
   # '@rObject: object to save
+  # '@dir: directory, including slash
   # '@filename: a name for the file, will be automatically appeneded with current date
   
   tryCatch( {library(rio)},
@@ -100,7 +103,7 @@ save_SAS_data <- function(rObject, filename) {
   )
   
   today_date = format(Sys.time(), "%m%d%Y")
-  save_path = paste(today_date, filename , sep="")
+  save_path = paste(dir, today_date, filename , sep="")
   check_when_save(save_path)
   export(rObject, save_path)
 }

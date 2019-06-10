@@ -53,7 +53,7 @@ read_xlsx_from_path <- function(filepath) {
       )
       data <- as.data.frame(read_excel(filepath))
       print(paste('Input object n rows:', toString(nrow(data))))
-      print(paste('Input object n columns:', toString(nrow(data))))
+      print(paste('Input object n columns:', toString(ncol(data))))
       return(data)
   }
 }

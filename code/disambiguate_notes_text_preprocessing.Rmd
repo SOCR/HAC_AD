@@ -79,7 +79,7 @@ Load the data from the source file. Assumes file in `.xlsx` format.
 
 
 ```{r}
-getwd() # make sure you're in the right spot! Expect "/Users/milk/Desktop/work/HAC"
+getwd() # make sure you're in the right spot! Expect "/Users/milk/Desktop/work/HAC_AD"
 ```
 
 This assumes that there is a separate directory for the data file. **Watch out for paths.**
@@ -332,7 +332,7 @@ disambiguate_note_contents <- function(row, toPrint=TRUE) {
 
 
 text.df$card_disambiguated_note <- sapply(text.df$DS_PreprocessedAnonymized_Text, disambiguate_note_contents, toPrint=FALSE)
-gc()
+gc() # garbage collection
 ```
 
 ```{r}
@@ -358,11 +358,7 @@ names(text.df)
 Write data out to file to inspect.
 
 ```{r}
-# today_date = format(Sys.time(), "%m%d%Y")
-# filename = "compare_disambiguation.csv" # note, this needs to be changed
-# csv_save_path = paste("data/", today_date, filename , sep="")
-# 
-# write.csv(text.df, file=csv_save_path)
+# save_csv(text.df, 'compare_disambiguation_results.csv')
 ```
 
 

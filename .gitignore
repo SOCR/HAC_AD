@@ -1,3 +1,6 @@
+# CARD SOFTWARE
+TightClusteringSenseDetection_v2/*
+
 # prevent data files
 *.csv
 *.txt
@@ -23,6 +26,7 @@ output/*
 
 # Session Data files
 .RData
+.Rproj
 
 # Example code in package build process
 *-Ex.R

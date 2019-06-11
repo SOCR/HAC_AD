@@ -17,6 +17,37 @@ check_when_save <- function(filepath){
 }
 
 
+use_first_row_as_col_names <- function(df) {
+  # 'function that uses the first row of a data frame as column names
+  # 'returns new data frame
+  # '@df: data.frame
+  names(df) <- as.character(unlist(df[1,]))
+  return(df[-1,])
+}
+
+
+read_multi_character_delim <- function(filepath, delimiter, header=TRUE) {
+  # 'function to read file delimited with a multi-character separator
+  # '@filepath: string corresponding to the realtive fil path containing the data
+  # '@delimiter: string with the separator
+  file_connection <- file(filepath)
+  data <- readLines(file_connection)
+  close(file_connection)
+
+  records <- sapply(data, strsplit, split=delimiter)
+  tmp_df <- data.frame(t(sapply(records,c)))
+  rownames(tmp_df) <- 1: nrow(tmp_df)
+  df <- as.data.frame(tmp_df,stringsAsFactors = FALSE)
+
+  if (header) {
+    df <- use_first_row_as_col_names(df)
+    return(df)
+  } else {
+    return(df)
+  }
+}
+
+
 read_csv_from_path <- function(filepath) {
   # 'function to read a csv file from a relative filepath and return a new data.frame
   # '@filepath string corresponding to the relative filepath

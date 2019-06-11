@@ -3,16 +3,16 @@
 # @Author: Cooper Stansbury
 
 
-check_when_save <- function(file_path){
+check_when_save <- function(filepath){
   # 'function to see if the object can be saved to specified location
-  # '@file_path: a string input. Should contain the file extension
-  if (file.exists(file_path)) {
-    print(paste("WARNING:'", normalizePath(file_path),
+  # '@filepath: a string input. Should contain the file extension
+  if (file.exists(filepath)) {
+    print(paste("WARNING:'", normalizePath(filepath),
                 "'already exists. File not saved. Please check your work."))
     print(paste('Command invoked from:', getwd()))
-    stopifnot(!file.exists(file_path)) # throw an error to exit outer function calls
+    stopifnot(!file.exists(filepath)) # throw an error to exit outer function calls
   } else {
-    print(paste("File saving to '", normalizePath(file_path), "'", sep=""))
+    print(paste("File saving to '", normalizePath(filepath), "'", sep=""))
   }
 }
 
@@ -36,7 +36,7 @@ read_csv_from_path <- function(filepath) {
 read_xlsx_from_path <- function(filepath) {
   # 'function to read an xlsx file from a relative filepath and return a new data.frame
   # '@filepath string corresponding to the relative filepath
-  
+
   if(!file.exists(filepath)) {
     print('ERROR: filepath does not exist.')
     print('Please make sure you are inputting a valid filepath realtive to: ')
@@ -79,7 +79,7 @@ save_csv <- function(rObject, dir, filename) {
   today_date = format(Sys.time(), "%m%d%Y")
   save_path = paste(dir, today_date, "-", filename , sep="")
   check_when_save(save_path)
-  write.csv(rObject, 
+  write.csv(rObject,
             file=save_path,
             quote = TRUE,
             row.names =FALSE)
@@ -90,8 +90,7 @@ save_SAS_data <- function(rObject, dir, filename) {
   # 'function to save data as a SAS object
   # '@rObject: object to save
   # '@dir: directory, including slash
-  # '@filename: a name for the file, will be automatically appeneded with current date
-  
+  # '@filename: a name for the file, will be automatically appeneded with current data
   tryCatch( {library(rio)},
             error=function(error_message) {
               message("Required package missing: 'rio'.")
@@ -100,8 +99,8 @@ save_SAS_data <- function(rObject, dir, filename) {
               message(error_message)
               return(NA)
             }
-  )
-  
+  ) # end tryCatch
+
   today_date = format(Sys.time(), "%m%d%Y")
   save_path = paste(dir, today_date, filename , sep="")
   check_when_save(save_path)

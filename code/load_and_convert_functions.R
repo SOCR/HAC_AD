@@ -36,7 +36,6 @@ read_csv_from_path <- function(filepath) {
 read_xlsx_from_path <- function(filepath) {
   # 'function to read an xlsx file from a relative filepath and return a new data.frame
   # '@filepath string corresponding to the relative filepath
-
   if(!file.exists(filepath)) {
     print('ERROR: filepath does not exist.')
     print('Please make sure you are inputting a valid filepath realtive to: ')

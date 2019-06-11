@@ -79,15 +79,20 @@ Load the data from the source file. Assumes file in `.xlsx` format.
 
 
 ```{r}
-getwd() # make sure you're in the right spot! Expect "/Users/milk/Desktop/work/HAC_AD"
+getwd() # make sure you're in the right spot! Expect "........./HAC_AD"
 ```
 
 This assumes that there is a separate directory for the data file. **Watch out for paths.**
+```{r}
+# relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" # osx
+relative_sample_path <- "../../local_data/DS_PreprocessedAnonymized_Text.xlsx" # win
+```
+
 
 ```{r}
 # here we use the load and convert functions in the local file
 source('code/load_and_convert_functions.R')
-raw_data.df <-  read_xlsx_from_path(filepath = 'data/DS_PreprocessedAnonymized_Text.xlsx')
+raw_data.df <-  read_xlsx_from_path(filepath = relative_sample_path)
 ```
 
 # Subset Text Field
@@ -229,13 +234,12 @@ perform_substitions <- function(sentence, abbreviation_list, toPrint=TRUE) {
   # '@toPrint: boolean argument specifiying whether or not to print output to console
   new_sentence <- sentence
   
-  ######################################################################################################### TODO 
-  # this may not be working correctly, replaces incorrect occurences
   # only detect distinct tokens (is this a correct assumption?)
   # use first match (sub) to replace abbreviations in order
   
   for (abbr in abbreviation_list) {
       parsed_abbr <- parse_abbr_line(abbr)
+      # note the asymetric whitespace around token to replace
       detected_abbr <- paste(parsed_abbr[1]," ", sep="")
       long_form_abbr <- paste(" ", parsed_abbr[2], " ", sep="")
     
@@ -376,7 +380,7 @@ The function below performs a number of steps:
 
 
 ```{r}
-def_perform_text_preprocessing_operations <- function(columnVector, stripName=TRUE, rmStopWords = FALSE, stemResults=FALSE) {
+perform_text_preprocessing_operations <- function(columnVector, stripName=TRUE, rmStopWords = FALSE, stemResults=FALSE) {
   # 'function to chain together various text preprocessing functions
   # '@columnVector: a column vector of textual data to process
   
@@ -406,7 +410,7 @@ def_perform_text_preprocessing_operations <- function(columnVector, stripName=TR
 
 
 # invoke using defaults
-doc_corpus <- def_perform_text_preprocessing_operations(text.df$card_disambiguated_note)
+doc_corpus <- perform_text_preprocessing_operations(text.df$card_disambiguated_note)
 doc_corpus[[2]]$content # empirical sanity-check
 ```
 

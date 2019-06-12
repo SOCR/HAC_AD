@@ -23,7 +23,52 @@ You can perform the same test using the `.jar` file:
 1. `cd TightSenseClustering_v2`
 1. `echo "the pt walked into the clinic, 1 h" | java -cp TightSenseTightSenseClustering.jar:bin/ MetaMapWrapper.SenseDisambiguationText`
 
+## Modifications
 
+The main difference in this implementation of CARD is the data streams are expected from `stdin` and printed to `stdout`. The `SenseDisambiguationText` class file was rewritten with the following input stream method:
+
+
+```java
+Scanner input = new Scanner(System.in);
+java.lang.String content = "";
+
+while (input.hasNext()) {
+  String line = input.nextLine().toString();
+  content = (new StringBuilder(java.lang.String.valueOf(((java.lang.Object) (content))))).append(line).append("\n").toString();
+}
+
+disambiguation.parse_file(content);
+```
+
+This replaces the original mechanism in `SenseDisambiguationText.parse_file()`
+
+```java
+final BufferedReader infile = new BufferedReader(new FileReader(infilename));
+```
+
+Further, this modification calls the 'parse' method on the input stream directly, as opposed to reading through a directory. Output is reformatted in the `parse_input()` as follows:
+
+```java
+public int parse_file(java.lang.String content)
+{
+  MetaMapWrapper.Document doc = new Document(content, infilename);
+  sb.detect_boundaries(doc);
+  doc.break_long_sentence();
+  java.lang.String ret = "";
+  java.lang.String as[];
+  int j = (as = doc.boundary_norm_str().split("\n")).length;
+  for(int i = 0; i < j; i++)
+  {
+      java.lang.String sentence = as[i];
+
+      System.out.println("BEGIN_SENTENCE:");
+      System.out.println(sentence.toString());
+      System.out.print(parse_sentence(sentence).toString());
+      System.out.println("END_SENTENCE." );
+  }
+    return 0;
+}
+```
 
 ## Citations:
 

@@ -80,6 +80,50 @@ read_multi_character_delim <- function(filepath, delimiter, header=TRUE) {
 }
 
 
+read_multi_character_delim_fast <- function(filepath, 
+                                            delimiter,
+                                            maxLength=20000000,
+                                            v=TRUE, header=TRUE) {
+  
+  # 'function to read file delimited with a multi-character separator
+  # '@filepath: string corresponding to the realtive fil path containing the data
+  # '@delimiter: string with the separator
+  # '@maxLength: need to guess at number or rows (which can sometimes be obtained 
+  #  using 'wc -l [file]) in order for fread() to sample correctly. Default is set
+  #  to over-estimate our largest file.
+  # '@v:verbose: passed to fread()
+  # '@header: boolen that calls use_first_row_as_col_names().
+  # this improves upon the example above by using data.table and fread
+  # See: https://stackoverflow.com/questions/1727772
+  
+  library(data.table)
+  gc() # careful with memory
+  tmp_tbl <- fread(filepath, 
+                   sep=NULL, 
+                   header=FALSE,
+                   verbose=v, 
+                   quote="",
+                   nrows=maxLength,
+                   na.strings=NULL,
+                   fill=TRUE,
+                   strip.white=TRUE,
+                   blank.lines.skip=TRUE,
+                   stringsAsFactors=FALSE)
+  print('1-d table read successful.')
+  # df <- as.data.frame(setDT(tmp_tbl)[, tstrsplit(tmp_tbl$V1, delimiter)])
+  # print('delimiter parsing successful.')
+  #
+  # if (header) {
+  #   df <- use_first_row_as_col_names(df)
+  #   return(df)
+  #   gc()
+  # } else {
+  #   return(df)
+  #   gc()
+  # }
+}
+
+
 read_csv_from_path <- function(filepath) {
   # 'function to read a csv file from a relative filepath and return a new data.frame
   # '@filepath string corresponding to the relative filepath

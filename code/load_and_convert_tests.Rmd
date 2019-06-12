@@ -56,11 +56,11 @@ getwd()
 # Loading Data
 
 ```{r}
-demographics_path <- '../../local_data/HPI-2914 Output/HPI-2914 Demographics.dsv'
-encounters_path <- '../../local_data/HPI-2914 Output/HPI-2914 Encounters.dsv'
-labs_path <- '../../local_data/HPI-2914 Output/HPI-2914 Labs.dsv'
-notes_path <- '../../local_data/HPI-2914 Output/HPI-2914 Notes.dsv'
-radiology_path <- '../../local_data/HPI-2914 Output/HPI-2914 Radiology.dsv'
+demographics_path <- '../../local_data/full_data/Demographics.dsv'
+encounters_path <- '../../local_data/full_data/Encounters.dsv'
+labs_path <- '../../local_data/full_data/Labs.dsv'
+notes_path <- '../../local_data/full_data/Notes.dsv'
+radiology_path <- '../../local_data/full_data/Radiology.dsv'
 ```
 
 An example of loading the sample data into a `data.frame` from a MS Excel file:
@@ -76,37 +76,40 @@ An example of loading the sample data into a `data.frame` from a MS Excel file:
 
 
 ```{r}
-demo_df <- read_multi_character_delim(demographics_path, "<break>", header = TRUE)
-head(demo_df)
+demo_df <- read_multi_character_delim_fast(demographics_path, "<break>", header = TRUE)
+nrow(demo_df)
+gc()
 ```
 
 
 ```{r}
-enc_df <- read_multi_character_delim(encounters_path, "<break>", header = TRUE)
-head(enc_df)
+enc_df <- read_multi_character_delim_fast(encounters_path, "<break>", header = TRUE)
+nrow(enc_df)
 ```
 
-It looks like 'Labs' is already a `.csv` file....
+It looks like 'Labs' is already a `.csv` file... Should consider writing a fast_read()?
 
 ```{r}
 lab_df <- read_csv_from_path(labs_path)
-head(lab_df)
+nrow(lab_df)
+gc()
 ```
 
 **WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
 
+
 ```{r}
-# note_df <- read_multi_character_delim(notes_path, "<break>", header = TRUE)
-# head(note_df)
+gc()
+source('code/load_and_convert_functions.R')
+note_df <- read_multi_character_delim_fast(notes_path, '<break>', v=FALSE, header = TRUE)
+nrow(note_df)
 ```
-
-
-
 
 
 ```{r}
 radio_df <- read_multi_character_delim(radiology_path, "<break>", header = TRUE)
-head(radio_df)
+nrow(radio_df)
+gc()
 ```
 
 # Saving Data

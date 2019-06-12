@@ -17,6 +17,38 @@ check_when_save <- function(filepath){
 }
 
 
+check_column_names <- function(df, replace=TRUE) {
+  # 'function to handle column names the contain special characters
+  # '@df: data frame to check for improperly formatted column names
+  # '@replace: replace = TRUE will return a new data frame with special
+  # characters removed, FALSE will only print out problematic column names
+  temp_df <- df
+  for (column_name in colnames(df)) {
+    only_underscores <- !grepl("[^0-9A-Za-z_///' ]", column_name)
+    print(paste('column name: ', column_name,
+                '--> passed special character test: ', only_underscores))
+
+    if (!only_underscores) {
+      print(paste("WARNING:", column_name , "contains problematic characters"))
+
+      if (replace) {
+        print(paste("stripping special characters from: ", column_name))
+        new_colname <- gsub("[^0-9A-Za-z_///' ]","", column_name)
+
+        # SAS column names cannot begin with numeric character
+        if (grepl("[[:digit:]]", substring(new_colname, 1, 1))) {
+          new_colname <- paste0("_", new_colname)
+        }
+
+        names(temp_df)[names(temp_df) == column_name] <- new_colname
+        print(paste("column names changd to: ", new_colname))
+        return(temp_df)
+      } else{}
+    } else{}
+  }
+}
+
+
 use_first_row_as_col_names <- function(df) {
   # 'function that uses the first row of a data frame as column names
   # 'returns new data frame
@@ -116,23 +148,27 @@ save_csv <- function(rObject, dir, filename) {
 }
 
 
-save_SAS_data <- function(rObject, dir, filename) {
-  # 'function to save data as a SAS object
-  # '@rObject: object to save
-  # '@dir: directory, including slash
-  # '@filename: a name for the file, will be automatically appeneded with current data
-  tryCatch( {library(rio)},
-            error=function(error_message) {
-              message("Required package missing: 'rio'.")
-              message("Try installing the package and rerunning the command.")
-              message("R system details:")
-              message(error_message)
-              return(NA)
-            }
-  ) # end tryCatch
+### NOTE: Currently it makes more sense to write SAS protocols to ingest
+### messy data instead of writing R translation scripts
 
-  today_date = format(Sys.time(), "%m%d%Y")
-  save_path = paste(dir, today_date, filename , sep="")
-  check_when_save(save_path)
-  export(rObject, save_path)
-}
+# save_SAS_data <- function(rObject, dir, filename) {
+#   # 'function to save data as a SAS object
+#   # '@rObject: object to save
+#   # '@dir: directory, including slash
+#   # '@filename: a name for the file, will be automatically appeneded with current data
+#   library(rio)
+#   tryCatch( {library(rio)},
+#             error=function(error_message) {
+#               message("Required package missing: 'rio'.")
+#               message("Try installing the package and rerunning the command.")
+#               message("R system details:")
+#               message(error_message)
+#               return(NA)
+#             }
+#   ) # end tryCatch
+#
+#   today_date = format(Sys.time(), "%m%d%Y")
+#   save_path = paste(dir, today_date, filename , sep="")
+#   check_when_save(save_path)
+#   export(rObject, save_path)
+# }

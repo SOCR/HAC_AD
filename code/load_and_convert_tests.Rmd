@@ -48,12 +48,68 @@ Below is a bash shell commad to print the functions in `code/load_and_convert_fu
 # cat code/load_and_convert_functions.R
 ```
 
+Check current working directory. Note: it is advisale to set the `knit directory` to 'Project.'
+
+```{r}
+getwd()
+```
+# Loading Data
+
+```{r}
+demographics_path <- '../../local_data/HPI-2914 Output/HPI-2914 Demographics.dsv'
+encounters_path <- '../../local_data/HPI-2914 Output/HPI-2914 Encounters.dsv'
+labs_path <- '../../local_data/HPI-2914 Output/HPI-2914 Labs.dsv'
+notes_path <- '../../local_data/HPI-2914 Output/HPI-2914 Notes.dsv'
+radiology_path <- '../../local_data/HPI-2914 Output/HPI-2914 Radiology.dsv'
+```
 
 An example of loading the sample data into a `data.frame` from a MS Excel file:
 
 ```{r}
-df <- read_xlsx_from_path(filepath = 'data/DS_PreprocessedAnonymized_Text.xlsx')
+# OSX test
+# df <- read_xlsx_from_path(filepath = 'data/DS_PreprocessedAnonymized_Text.xlsx')
+
+# win test
+# df <- read_xlsx_from_path(filepath = '../../local_data/DS_PreprocessedAnonymized_Text.xlsx')
 ```
+
+
+
+```{r}
+demo_df <- read_multi_character_delim(demographics_path, "<break>", header = TRUE)
+head(demo_df)
+```
+
+
+```{r}
+enc_df <- read_multi_character_delim(encounters_path, "<break>", header = TRUE)
+head(enc_df)
+```
+
+It looks like 'Labs' is already a `.csv` file....
+
+```{r}
+lab_df <- read_csv_from_path(labs_path)
+head(lab_df)
+```
+
+**WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
+
+```{r}
+# note_df <- read_multi_character_delim(notes_path, "<break>", header = TRUE)
+# head(note_df)
+```
+
+
+
+
+
+```{r}
+radio_df <- read_multi_character_delim(radiology_path, "<break>", header = TRUE)
+head(radio_df)
+```
+
+# Saving Data
 
 ## R Objects
 R changes rapidly. File types specific to R may not be robust to future changes in technology. ** Note on `save`:** the R function `save` stores both the object and the name of the object. This is important when loading objects back into R. `.Rdata` (sometimes `.Rda`) files are specific to the R environment. They can store arbitrary numbers of objects in a single file. For more documentation I suggest: 
@@ -61,39 +117,33 @@ R changes rapidly. File types specific to R may not be robust to future changes 
 
 **Note for OSX Users:** The extension may matter. We have chosen `.Rdata`. Reference: [error-in-gzfilefile-wb-cannot-open-the-connection-or-compressed-file](https://stackoverflow.com/questions/15363076/error-in-gzfilefile-wb-cannot-open-the-connection-or-compressed-file).
 
-The follow block demonstrates saving both `.Rdata` or `.rds` format objects.
+The following block demonstrates saving both `.Rdata` or `.rds` format objects.
 
 ```{r}
-save_rData(df, 'sample.Rdata')
-save_rData(df, 'sample.rds')
-```
-
-## Non-R Objects
-Below are a few examples of saving data in formats intended for other statistical software. Many of these blocks require the library `foreign` or `rio` to be installed. **NOTE:** `rio` has much easier syntax and saves standalone files. We have defaulted to it here.
-
-These packages can be installed via the code block below. It is suggested that one read the library documentation when working with file formats for other statistical software: [https://www.rdocumentation.org/packages/foreign/versions/0.8-71](https://www.rdocumentation.org/packages/foreign/versions/0.8-71).
-
-```{r}
-# # installs required package on local machine.
-# install.packages('foreign')
-# library(foreign)
-
-# install.packages('rio')
-# library(rio)
+# save_rData(df, 'sample.Rdata')
+# save_rData(df, 'sample.rds')
 ```
 
 
-### CSV
-This is the most robust long-term file storage format. Not that there are several possible arguments for `write.csv()` that may be necessary to specify depending on downstream requirements.
+## CSV
+This is the most robust long-term file storage format. Note that there are several possible arguments for `write.csv()` that may be necessary to specify depending on downstream requirements.
+
 ```{r}
-save_csv(df, 'sample.csv')
+#  save_csv(df, '../../local_data/', 'mini_sample_test.csv')
 ```
 
-### SAS
-Create a version of the file for SAS. Note, this requires renaming, or dropping improperly named columns.
+```{r}
+save_csv(demo_df, '../../local_data/tests/', 'demographics_test.csv')
+save_csv(enc_df, '../../local_data/tests/', 'enounters_test.csv')
+save_csv(lab_df, '../../local_data/tests/', 'labs_test.csv')
+save_csv(radio_df, '../../local_data/tests/', 'radiology_test.csv')
+```
+
+
+Please recall that this data object is much larger than the others. 
 
 ```{r}
-save_SAS_data(df, 'sample.SAS')
+# save_csv(note_df, '../../local_data/tests/', 'notes_test.csv')
 ```
 
 

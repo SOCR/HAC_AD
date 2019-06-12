@@ -1,6 +1,3 @@
-# CARD SOFTWARE
-TightClusteringSenseDetection_v2/*
-
 # prevent data files
 *.csv
 *.txt

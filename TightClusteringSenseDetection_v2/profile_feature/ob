@@ -1,0 +1,4 @@
+'referring'	'null'	ob~|~obstetrician~|||~$F_0$_referring~||~$F_1$_L_referring~||~$F_2$_L_1_referring~||~$F_3$_referring~||~$F_4$_LETTER~||~$F_5$_NULL~||~$F_6$_NULL$F_7$_NULL~||~$F_8$_NULL
+'referring'	'cnm -'	ob~|~obstetrician~|||~$F_0$_-~|~$F_0$_cnm~|~$F_0$_referring~||~$F_1$_L_referring~||~$F_2$_L_1_referring~||~$F_3$_referring~||~$F_4$_LETTER~||~$F_5$_R_-~|~$F_5$_R_cnm~||~$F_6$_R_1_cnm~|~$F_6$_R_2_-~||~$F_7$_cnm~||~$F_8$_LETTER
+'referring'	'dr .'	ob~|~obstetrician~|||~$F_0$_.~|~$F_0$_dr~|~$F_0$_referring~||~$F_1$_L_referring~||~$F_2$_L_1_referring~||~$F_3$_referring~||~$F_4$_LETTER~||~$F_5$_R_.~|~$F_5$_R_dr~||~$F_6$_R_1_dr~|~$F_6$_R_2_.~||~$F_7$_dr~||~$F_8$_LETTER
+'referring'	'clark tennesse'	ob~|~obstetrician~|||~$F_0$_clark~|~$F_0$_referring~|~$F_0$_tennesse~||~$F_1$_L_referring~||~$F_2$_L_1_referring~||~$F_3$_referring~||~$F_4$_LETTER~||~$F_5$_R_clark~|~$F_5$_R_tennesse~||~$F_6$_R_1_clark~|~$F_6$_R_2_tennesse~||~$F_7$_clark~||~$F_8$_LETTER

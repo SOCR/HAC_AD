@@ -1,0 +1,6 @@
+stim
+vocab	19	$F_0$_respir_1	$F_4$_LETTER_1	$F_1$_L_respir_1	$F_0$_dri_1	$F_2$_L_4_resuscitation_1	$F_0$_suction_1	$F_0$_resuscitation_1	$F_5$_R_suction_1	$F_3$_dri_1	$F_6$_R_1_suction_1	$F_7$_suction_1	$F_2$_L_1_dri_1	$F_0$_spontan_1	$F_8$_LETTER_1	$F_2$_L_3_spontan_1	$F_2$_L_2_respir_1	$F_1$_L_spontan_1	$F_1$_L_resuscitation_1	$F_1$_L_dri_1	
+DF	1	$F_0$_respir_1	$F_4$_LETTER_1	$F_1$_L_respir_1	$F_0$_dri_1	$F_2$_L_4_resuscitation_1	$F_0$_suction_1	$F_0$_resuscitation_1	$F_5$_R_suction_1	$F_3$_dri_1	$F_6$_R_1_suction_1	$F_7$_suction_1	$F_2$_L_1_dri_1	$F_0$_spontan_1	$F_8$_LETTER_1	$F_2$_L_3_spontan_1	$F_2$_L_2_respir_1	$F_1$_L_spontan_1	$F_1$_L_resuscitation_1	$F_1$_L_dri_1	
+stimulated	1	$F_0$_respir_0.0	$F_4$_LETTER_0.0	$F_1$_L_respir_0.0	$F_0$_dri_0.0	$F_2$_L_4_resuscitation_0.0	$F_0$_suction_0.0	$F_0$_resuscitation_0.0	$F_5$_R_suction_0.0	$F_3$_dri_0.0	$F_6$_R_1_suction_0.0	$F_7$_suction_0.0	$F_2$_L_1_dri_0.0	$F_0$_spontan_0.0	$F_8$_LETTER_0.0	$F_2$_L_3_spontan_0.0	$F_2$_L_2_respir_0.0	$F_1$_L_spontan_0.0	$F_1$_L_resuscitation_0.0	$F_1$_L_dri_0.0	
+stimulated
+

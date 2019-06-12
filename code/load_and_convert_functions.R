@@ -110,33 +110,28 @@ read_multi_character_delim_fast <- function(filepath,
                    blank.lines.skip=TRUE,
                    stringsAsFactors=FALSE)
   print('1-d table read successful.')
-  # df <- as.data.frame(setDT(tmp_tbl)[, tstrsplit(tmp_tbl$V1, delimiter)])
-  # print('delimiter parsing successful.')
-  #
-  # if (header) {
-  #   df <- use_first_row_as_col_names(df)
-  #   return(df)
-  #   gc()
-  # } else {
-  #   return(df)
-  #   gc()
-  # }
+  df <- as.data.frame(setDT(tmp_tbl)[, tstrsplit(tmp_tbl$V1, delimiter)])
+  print('delimiter parsing successful.')
+
+  if (header) {
+    df <- use_first_row_as_col_names(df)
+    return(df)
+    gc()
+  } else {
+    return(df)
+    gc()
+  }
 }
 
 
-read_csv_from_path <- function(filepath) {
+read_csv_from_path_fast <- function(filepath) {
   # 'function to read a csv file from a relative filepath and return a new data.frame
   # '@filepath string corresponding to the relative filepath
-  if(!file.exists(filepath)) {
-    print('ERROR: filepath does not exist.')
-    print('Please make sure you are inputting a valid filepath realtive to: ')
-    print(paste('read_xlsx_from_path invoked from:', getwd()))
-  } else {
-    data <- read.csv(filepath, header=TRUE)
-    print(paste('Input object n rows:', toString(nrow(data))))
-    print(paste('Input object n columns:', toString(nrow(data))))
-    return(data)
-  }
+  library(readr)
+  data <- as.data.frame(read_table(filepath))
+  print(paste('Input object n rows:', toString(nrow(data))))
+  print(paste('Input object n columns:', toString(nrow(data))))
+  return(data)
 }
 
 

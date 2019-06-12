@@ -76,13 +76,13 @@ An example of loading the sample data into a `data.frame` from a MS Excel file:
 
 
 ```{r}
-demo_df <- read_multi_character_delim_fast(demographics_path, "<break>", header = TRUE)
+demo_df <- read_multi_character_delim_fast(demographics_path, v=FALSE, "<break>", header = TRUE)
 nrow(demo_df)
-gc()
 ```
 
 
 ```{r}
+gc()
 enc_df <- read_multi_character_delim_fast(encounters_path, "<break>", header = TRUE)
 nrow(enc_df)
 ```
@@ -90,9 +90,9 @@ nrow(enc_df)
 It looks like 'Labs' is already a `.csv` file... Should consider writing a fast_read()?
 
 ```{r}
-lab_df <- read_csv_from_path(labs_path)
-nrow(lab_df)
 gc()
+lab_df <- read_csv_from_path_fast(labs_path)
+nrow(lab_df)
 ```
 
 **WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
@@ -101,13 +101,13 @@ gc()
 ```{r}
 gc()
 source('code/load_and_convert_functions.R')
-note_df <- read_multi_character_delim_fast(notes_path, '<break>', v=FALSE, header = TRUE)
+note_df <- read_multi_character_delim_fast(notes_path, v=FALSE, '<break>', header = TRUE)
 nrow(note_df)
 ```
 
 
 ```{r}
-radio_df <- read_multi_character_delim(radiology_path, "<break>", header = TRUE)
+radio_df <- read_multi_character_delim_fast(radiology_path, v=FALSE, "<break>", header = TRUE)
 nrow(radio_df)
 gc()
 ```
@@ -136,10 +136,10 @@ This is the most robust long-term file storage format. Note that there are sever
 ```
 
 ```{r}
-save_csv(demo_df, '../../local_data/tests/', 'demographics_test.csv')
-save_csv(enc_df, '../../local_data/tests/', 'enounters_test.csv')
-save_csv(lab_df, '../../local_data/tests/', 'labs_test.csv')
-save_csv(radio_df, '../../local_data/tests/', 'radiology_test.csv')
+save_csv(demo_df, '../../local_data/stuctured_csv_data/', 'demographics_test.csv')
+save_csv(enc_df, '../../local_data/stuctured_csv_data/', 'enounters_test.csv')
+save_csv(lab_df, '../../local_data/stuctured_csv_data/', 'labs_test.csv')
+save_csv(radio_df, '../../local_data/stuctured_csv_data/', 'radiology_test.csv')
 ```
 
 

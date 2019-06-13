@@ -87,13 +87,7 @@ enc_df <- read_multi_character_delim_fast(encounters_path, "<break>", header = T
 nrow(enc_df)
 ```
 
-It looks like 'Labs' is already a `.csv` file... Should consider writing a fast_read()?
-
-```{r}
-gc()
-lab_df <- read_csv_from_path_fast(labs_path)
-nrow(lab_df)
-```
+It looks like 'Labs' is already a `.csv` file.
 
 **WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
 
@@ -101,15 +95,14 @@ nrow(lab_df)
 ```{r}
 gc()
 source('code/load_and_convert_functions.R')
-note_df <- read_multi_character_delim_fast(notes_path, v=FALSE, '<break>', header = TRUE)
+note_df <- read_notes_custom_delim(notes_path, v=FALSE, '<break>', header = TRUE)
 nrow(note_df)
 ```
 
-
 ```{r}
+gc()
 radio_df <- read_multi_character_delim_fast(radiology_path, v=FALSE, "<break>", header = TRUE)
 nrow(radio_df)
-gc()
 ```
 
 # Saving Data
@@ -146,7 +139,7 @@ save_csv(radio_df, '../../local_data/stuctured_csv_data/', 'radiology_test.csv')
 Please recall that this data object is much larger than the others. 
 
 ```{r}
-# save_csv(note_df, '../../local_data/tests/', 'notes_test.csv')
+save_csv(note_df, '../../local_data/structured_csv_data/', 'notes_test.csv')
 ```
 
 

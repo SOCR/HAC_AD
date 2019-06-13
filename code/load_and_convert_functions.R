@@ -98,17 +98,18 @@ read_multi_character_delim_fast <- function(filepath,
   
   library(data.table)
   gc() # careful with memory
-  tmp_tbl <- fread(filepath, 
-                   sep=NULL, 
+  tmp_tbl <- fread(filepath,
+                   sep=NULL,
                    header=FALSE,
-                   verbose=v, 
-                   quote="",
+                   verbose=v,
                    nrows=maxLength,
                    na.strings=NULL,
                    fill=TRUE,
                    strip.white=TRUE,
                    blank.lines.skip=TRUE,
                    stringsAsFactors=FALSE)
+  
+  
   print('1-d table read successful.')
   df <- as.data.frame(setDT(tmp_tbl)[, tstrsplit(tmp_tbl$V1, delimiter)])
   print('delimiter parsing successful.')
@@ -124,11 +125,70 @@ read_multi_character_delim_fast <- function(filepath,
 }
 
 
-read_csv_from_path_fast <- function(filepath) {
+read_notes_custom_delim <- function(filepath, 
+                                    delimiter,
+                                    maxLength=20000000,
+                                    skip=FALSE,
+                                    v=TRUE, header=TRUE) {
+  
+  # 'function to read the NOTES file delimited with a multi-character separator
+  # '@filepath: string corresponding to the realtive fil path containing the data
+  # '@delimiter: string with the separator
+  # '@maxLength: need to guess at number or rows (which can sometimes be obtained 
+  #  using 'wc -l [file]) in order for fread() to sample correctly. Default is set
+  #  to over-estimate our largest file.
+  # '@v:verbose: passed to fread()
+  # '@header: boolen that calls use_first_row_as_col_names().
+  # this improves upon the example above by using data.table and fread
+  # See: https://stackoverflow.com/questions/1727772
+  
+  library(data.table)
+  library(readr)
+  gc() # careful with memory
+  
+  # can't use fread because comment.char() note implemented:
+  # https://github.com/Rdatatable/data.table/issues/856
+  # source file contains many clank lines
+  
+  
+  tmp_tbl <- as.data.table(read_table(filepath,
+                        n_max = maxLength,
+                        col_names = FALSE,
+                        skip_empty_rows=skip,
+                        progress=TRUE))
+  
+  gc() # careful with memory
+  print('1-d table read successful.')
+  print(paste('n raw records read: ', nrow(tmp_tbl)))
+  df <- as.data.frame(setDT(tmp_tbl)[, tstrsplit(tmp_tbl$X1, delimiter)])
+  print('delimiter parsing successful.')
+  print(paste('n parsed records: ', nrow(df)))
+  
+  if (header) {
+    df <- use_first_row_as_col_names(df)
+    return(df)
+    gc()
+  } else {
+    return(df)
+    gc()
+  }
+}
+
+
+read_csv_from_path <- function(filepath,
+                               header=TRUE,
+                               maxLength=2000000) {
   # 'function to read a csv file from a relative filepath and return a new data.frame
   # '@filepath string corresponding to the relative filepath
-  library(readr)
-  data <- as.data.frame(read_table(filepath))
+  # '@maxLength: need to guess at number or rows (which can sometimes be obtained 
+  #  using 'wc -l [file]) in order for fread() to sample correctly. Default is set
+  #  to over-estimate our largest file.
+  # '@header: boolen passed to read.table
+  
+  library(data.table)
+  data <-  read.table(file=filepath,
+                header=header,
+                nrows = maxLength)
   print(paste('Input object n rows:', toString(nrow(data))))
   print(paste('Input object n columns:', toString(nrow(data))))
   return(data)
@@ -185,29 +245,3 @@ save_csv <- function(rObject, dir, filename) {
             quote = TRUE,
             row.names =FALSE)
 }
-
-
-### NOTE: Currently it makes more sense to write SAS protocols to ingest
-### messy data instead of writing R translation scripts
-
-# save_SAS_data <- function(rObject, dir, filename) {
-#   # 'function to save data as a SAS object
-#   # '@rObject: object to save
-#   # '@dir: directory, including slash
-#   # '@filename: a name for the file, will be automatically appeneded with current data
-#   library(rio)
-#   tryCatch( {library(rio)},
-#             error=function(error_message) {
-#               message("Required package missing: 'rio'.")
-#               message("Try installing the package and rerunning the command.")
-#               message("R system details:")
-#               message(error_message)
-#               return(NA)
-#             }
-#   ) # end tryCatch
-#
-#   today_date = format(Sys.time(), "%m%d%Y")
-#   save_path = paste(dir, today_date, filename , sep="")
-#   check_when_save(save_path)
-#   export(rObject, save_path)
-# }

@@ -1,0 +1,6 @@
+tmax
+vocab	21	$F_2$_L_1_hospit_1	$F_1$_L_hospit_1	$F_4$_LETTER_1	$F_0$_current_1	$F_6$_R_4_puls_1	$F_5$_R_puls_1	$F_0$_bp_1	$F_7$_$$num$$_1	$F_5$_R_$$num$$_1	$F_5$_R_current_1	$F_5$_R_bp_1	$F_6$_R_5_$$num$$_1	$F_0$_hospit_1	$F_6$_R_3_$$num$$_1	$F_6$_R_2_current_1	$F_0$_puls_1	$F_6$_R_6_bp_1	$F_6$_R_1_$$num$$_1	$F_8$_NUM_1	$F_0$_$$num$$_1	$F_3$_hospit_1	
+DF	1	$F_2$_L_1_hospit_1	$F_1$_L_hospit_1	$F_4$_LETTER_1	$F_0$_current_1	$F_6$_R_4_puls_1	$F_5$_R_puls_1	$F_0$_bp_1	$F_7$_$$num$$_1	$F_5$_R_$$num$$_1	$F_5$_R_current_1	$F_5$_R_bp_1	$F_6$_R_5_$$num$$_1	$F_0$_hospit_1	$F_6$_R_3_$$num$$_1	$F_6$_R_2_current_1	$F_0$_puls_1	$F_6$_R_6_bp_1	$F_6$_R_1_$$num$$_1	$F_8$_NUM_1	$F_0$_$$num$$_1	$F_3$_hospit_1	
+temperature max	1	$F_2$_L_1_hospit_0.0	$F_1$_L_hospit_0.0	$F_4$_LETTER_0.0	$F_0$_current_0.0	$F_6$_R_4_puls_0.0	$F_5$_R_puls_0.0	$F_0$_bp_0.0	$F_7$_$$num$$_0.0	$F_5$_R_$$num$$_0.0	$F_5$_R_current_0.0	$F_5$_R_bp_0.0	$F_6$_R_5_$$num$$_0.0	$F_0$_hospit_0.0	$F_6$_R_3_$$num$$_0.0	$F_6$_R_2_current_0.0	$F_0$_puls_0.0	$F_6$_R_6_bp_0.0	$F_6$_R_1_$$num$$_0.0	$F_8$_NUM_0.0	$F_0$_$$num$$_0.0	$F_3$_hospit_0.0	
+temperature max
+

@@ -3,7 +3,7 @@
 TightSenseClustering is a wrapper for the open source project: Clinical Abbreviation Recognition and Disambiguation (CARD), available here https://sbmi.uth.edu/ccb/resources/abbreviation.htm. This directory contains modified file I/O methods in the class [SenseDisambiguationText](TightClusteringSenseDetection/bin/MetaMapWrapper/SenseDisambiguationText.class) and is published here with permission from the authors. `SenseDisambiguationText.class` was re-interpreted in order to facilitate input streams from `stdin` and `stdout` to enable piping of bytes from memory instead of from disk.
 
 ## Usage:
-To test the implementation perform the following steps.
+To test the implementation perform the following steps. **Note:** this solution is relative path dependent, and will only when invoked from the directory: `TightSenseClustering_v2`. For a more portable solution see the `.jar` file in the `code/` directory.
 
 1. `cd TightSenseClustering_v2`
 1. `echo "the pt walked in to the clinic, 1 h" | java -cp ./bin MetaMapWrapper.SenseDisambiguationText`

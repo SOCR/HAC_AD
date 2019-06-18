@@ -1,4 +1,0 @@
-'chest'	'bilater .'	cta~|~clear to auscultation~|||~$F_0$_.~|~$F_0$_bilater~|~$F_0$_chest~||~$F_1$_L_chest~||~$F_2$_L_1_chest~||~$F_3$_chest~||~$F_4$_LETTER~||~$F_5$_R_.~|~$F_5$_R_bilater~||~$F_6$_R_1_bilater~|~$F_6$_R_2_.~||~$F_7$_bilater~||~$F_8$_LETTER
-'lungs'	'bilater .'	cta~|~clear to auscultation~|||~$F_0$_.~|~$F_0$_bilater~|~$F_0$_lungs~||~$F_1$_L_lungs~||~$F_2$_L_1_lungs~||~$F_3$_lungs~||~$F_4$_LETTER~||~$F_5$_R_.~|~$F_5$_R_bilater~||~$F_6$_R_1_bilater~|~$F_6$_R_2_.~||~$F_7$_bilater~||~$F_8$_LETTER
-'lungs'	'null'	cta~|~clear to auscultation~|||~$F_0$_lungs~||~$F_1$_L_lungs~||~$F_2$_L_1_lungs~||~$F_3$_lungs~||~$F_4$_LETTER~||~$F_5$_NULL~||~$F_6$_NULL$F_7$_NULL~||~$F_8$_NULL
-'chest'	'bilater .'	cta~|~clear to auscultation~|||~$F_0$_.~|~$F_0$_bilater~|~$F_0$_chest~||~$F_1$_L_chest~||~$F_2$_L_1_chest~||~$F_3$_chest~||~$F_4$_LETTER~||~$F_5$_R_.~|~$F_5$_R_bilater~||~$F_6$_R_1_bilater~|~$F_6$_R_2_.~||~$F_7$_bilater~||~$F_8$_LETTER

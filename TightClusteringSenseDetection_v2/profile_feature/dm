@@ -1,2 +1,0 @@
-'type $$num$$'	'.'	dm~|~diabetes mellitus~|||~$F_0$_$$num$$~|~$F_0$_.~|~$F_0$_type~||~$F_1$_L_$$num$$~|~$F_1$_L_type~||~$F_2$_L_1_$$num$$~|~$F_2$_L_2_type~||~$F_3$_$$num$$~||~$F_4$_NUM~||~$F_5$_R_.~||~$F_6$_R_1_.~||~$F_7$_.~||~$F_8$_NO_LETTER
-'steroid-induc'	'.'	dm~|~diabetes mellitus~|||~$F_0$_.~|~$F_0$_steroid-induc~||~$F_1$_L_steroid-induc~||~$F_2$_L_1_steroid-induc~||~$F_3$_steroid-induc~||~$F_4$_ELSE~||~$F_5$_R_.~||~$F_6$_R_1_.~||~$F_7$_.~||~$F_8$_NO_LETTER

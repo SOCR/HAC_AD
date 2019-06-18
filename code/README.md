@@ -16,10 +16,10 @@ source([function_file_name].R)
 SenseDetection is a wrapper for the open source project: Clinical Abbreviation Recognition and Disambiguation (CARD), available here https://sbmi.uth.edu/ccb/resources/abbreviation.htm. This directory contains modified file I/O methods in the class [SenseDisambiguationText](TightClusteringSenseDetection/bin/MetaMapWrapper/SenseDisambiguationText.class) and is published here with permission from the authors. `SenseDisambiguationText.class` was re-interpreted in order to facilitate input streams from `stdin` and `stdout` to enable piping of bytes from memory instead of from disk. Further, the file resources were moved to command-line arguments to facilitate easier access to these resources. The resources provided by CARD via the initial download are available in the `card_resources` directory.
 
 ### Usage:
-This `.jar` file can be used in the following manner:
+The `SenseDetection/TightSenseClustering.jar` file can be used in the following manner:
 
 ```
-[pipe input from stdin] | java -jar sense_detection.jar \
+[pipe input from stdin] | java -jar TightSenseClustering.jar \
       [word_file] \
       [abbreviation_file] \
       [profile_directory] \
@@ -27,10 +27,10 @@ This `.jar` file can be used in the following manner:
 
 ```
 
-A simple example can be seen by running `./test_jar.sh`.
+A simple example can be seen by running `./test_jar.sh` from `SenseDetection/`.
 
 
-### SenseDetection Modifications
+### MetaMapWrapper Modifications
 
 There are two main differences in this implementation of CARD. First, the data streams are expected from `stdin` and printed to `stdout`. The `SenseDisambiguationText` class file was rewritten with the following input stream method:
 
@@ -108,7 +108,7 @@ public static void main(final java.lang.String[] argv) {
 1. Xu H, Stetson PD, Friedman C. Methods for Building Sense Inventories of Abbreviations in Clinical Notes. J Am Med Inform Assoc. 2009 Jan 1;16(1):103–8.
 
 ## Testing
-There are a number of bash tests (files ending in `.sh`) in this dir. 
+There are a number of bash tests (files ending in `.sh`) in this dir.
 
 ## Template
 The [TEMPLATE](template.Rmd) notebook is to ensure all analysis is formatted consistently.

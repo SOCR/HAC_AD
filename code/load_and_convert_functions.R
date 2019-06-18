@@ -184,7 +184,7 @@ read_csv_from_path <- function(filepath,
   #  using 'wc -l [file]) in order for fread() to sample correctly. Default is set
   #  to over-estimate our largest file.
   # '@header: boolen passed to read.table
-  
+
   library(data.table)
   data <-  read.table(file=filepath,
                 header=header,

@@ -17,6 +17,7 @@
 # prevent knitr artifacts from commit
 *.pdf
 *.tex
+*.html
 
 data/*
 output/*

@@ -3,10 +3,19 @@ title: "Health Analytics Collaboratory (HAC) - University of Michigan"
 subtitle: "<h2><u>HAC Alzheimer's Disease Digital Health Analytics Project: Loading and Converting Data Files </u></h2>"
 author: "<h3>Ivo Dinov, Cooper Stansbury, Haiyin Liu, Bingxin Chen</h3>"
 date: "`r format(Sys.time(), '%B %Y')`"
-tags: [HAC, DSPA, SOCR, MIDAS, Big Data, Predictive Analytics, Computable Phenotypes] 
-output: 
-  html_notebook
-  df_print: paged
+tags: [DSPA, SOCR, MIDAS, Big Data, Predictive Analytics] 
+output:
+  html_document:
+    theme: spacelab
+    highlight: tango
+    includes:
+      before_body: SOCR_header.html
+    toc: true
+    number_sections: true
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
 ---
 
 # Introduction
@@ -64,16 +73,47 @@ demographics_path <- '../../local_data/full_data/Demographics.dsv'
 
 
 ```{r}
-demo_df <- read_multi_character_delim_fast(demographics_path, v=FALSE, "<break>", header = TRUE)
-nrow(demo_df) #Expect 2052 total records (first record is a header).
+demo_raw <- read_multi_character_delim_fast(demographics_path, v=FALSE, "<break>", header = TRUE)
+nrow(demo_raw) #Expect 2052 total records (first record is a header).
 ```
 
 ```{r}
-head(demo_df)
+# View(demo_raw)
+```
+
+
+```{r}
+names(demo_raw)
+```
+
+Transform Data Types 
+
+```{r}
+demo_df <- transform(demo_raw, 
+                    STUDY_PAT_ID = as.factor(STUDY_PAT_ID),
+                    SOURCE_DATABASE = as.factor(STUDY_PAT_ID),
+                    GENDER = as.factor(GENDER),
+                    BIRTH_DATE = as.Date(BIRTH_DATE, format='%m-%d-%Y'),
+                    DEATH_DATE = as.Date(DEATH_DATE, format='%m-%d-%Y'),
+                    PATIENT_DECEASED = as.factor(PATIENT_DECEASED),
+                    AGE_CUR_OR_AT_DEATH = as.numeric(AGE_CUR_OR_AT_DEATH),
+                    RACE = as.factor(RACE),
+                    ETHNICITY = as.factor(ETHNICITY),
+                    EDUCATION_YEARS = as.character(EDUCATION_YEARS), # this will require some cleaning 
+                    EXAM_COUNT = as.numeric(EXAM_COUNT),
+                    FIRST_EXAM_DATE = as.Date(FIRST_EXAM_DATE, format='%m-%d-%Y'),
+                    LAST_EXAM_DATE = as.Date(LAST_EXAM_DATE, format='%m-%d-%Y'),
+                    DEMENTIA_DX_BILL_CLAR = as.factor(DEMENTIA_DX_BILL_CLAR),
+                    DEMENTIA_DX_CLIN_CLAR = as.factor(DEMENTIA_DX_CLIN_CLAR),
+                    DEMENTIA_DX_BILL_HSDW = as.factor(DEMENTIA_DX_BILL_HSDW),
+                    DEMENTIA_DX_CLIN_HSDW = as.factor(DEMENTIA_DX_CLIN_HSDW)
+                    )
+
+sapply(demo_df, class)
 ```
 
 ```{r}
-knit.print.data.frame <- lemon_print
+head(demo_df$BIRTH_DATE)
 ```
 
 
@@ -81,32 +121,47 @@ knit.print.data.frame <- lemon_print
 str(demo_df)
 ```
 
+String value of "NA" not converted to true `NA`. Here we convert.
 
 ```{r}
-summary(demo_df)
+demo_df$EDUCATION_YEARS[demo_df$EDUCATION_YEARS == "NA" ] <- NA
 ```
+
 
 ```{r}
 introduce(demo_df)
 ```
 
 ```{r}
+plot_missing(demo_df)
+```
+
+```{r}
 plot_bar(demo_df)
 ```
 
-
-
-```{r}
-plot_bar(demo_df$AGE_CUR_OR_AT_DEATH)
-```
+**TO DO** Handle the messiness in the education field.
 
 ```{r}
 plot_bar(demo_df$EDUCATION_YEARS)
 ```
 
 ```{r}
-plot_histogram(as.numeric(demo_df$AGE_CUR_OR_AT_DEATH))
+plot_histogram(demo_df$AGE_CUR_OR_AT_DEATH)
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Encounters
@@ -246,4 +301,52 @@ Please recall that this data object is much larger than the others.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--html_preserve-->
+<div>
+    	<footer><center>
+			<a href="http://www.socr.umich.edu/">SOCR Resource</a>
+				Visitor number <img src="http://counter.digits.net/?counter=SOCR"
+	 			align="middle" border="0" height="20" hspace="4" vspace="2" width="60">
+				<script type="text/javascript">
+					var d = new Date();
+					document.write(" | " + d.getFullYear() + " | ");
+				</script> 
+				<a href="http://socr.umich.edu/img/SOCR_Email.png"><img alt="SOCR Email"
+	 			title="SOCR Email" src="http://socr.umich.edu/img/SOCR_Email.png"
+	 			style="border: 0px solid ;"></a>
+	 		 </center>
+	 	</footer>
+
+	<!-- Start of StatCounter Code -->
+		<script type="text/javascript">
+			var sc_project=5714596; 
+			var sc_invisible=1; 
+			var sc_partition=71; 
+			var sc_click_stat=1; 
+			var sc_security="038e9ac4"; 
+		</script>
+		
+		<script type="text/javascript" src="https://www.statcounter.com/counter/counter.js"></script>
+	<!-- End of StatCounter Code -->
+	
+	<!-- GoogleAnalytics -->
+		<script src="https://www.google-analytics.com/urchin.js" type="text/javascript"> </script>
+		<script type="text/javascript"> _uacct = "UA-676559-1"; urchinTracker(); </script>
+	<!-- End of GoogleAnalytics Code -->
+</div>
+<!--/html_preserve-->
 

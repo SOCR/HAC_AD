@@ -16,7 +16,7 @@ source([function_file_name].R)
 SenseDetection is a wrapper for the open source project: Clinical Abbreviation Recognition and Disambiguation (CARD), available here https://sbmi.uth.edu/ccb/resources/abbreviation.htm. This directory contains modified file I/O methods in the class [SenseDisambiguationText](TightClusteringSenseDetection/bin/MetaMapWrapper/SenseDisambiguationText.class) and is published here with permission from the authors. `SenseDisambiguationText.class` was re-interpreted in order to facilitate input streams from `stdin` and `stdout` to enable piping of bytes from memory instead of from disk. Further, the file resources were moved to command-line arguments to facilitate easier access to these resources. The resources provided by CARD via the initial download are available in the `card_resources` directory.
 
 ### Usage:
-The `SenseDetection/TightSenseClustering.jar` file can be used in the following manner:
+The `TightSenseClustering.jar` file can be used in the following manner:
 
 ```
 [pipe input from stdin] | java -jar TightSenseClustering.jar \
@@ -27,7 +27,7 @@ The `SenseDetection/TightSenseClustering.jar` file can be used in the following 
 
 ```
 
-A simple example can be seen by running `./test_jar.sh` from `SenseDetection/`.
+A simple example can be seen by running `./test_jar.sh.`
 
 
 ### MetaMapWrapper Modifications

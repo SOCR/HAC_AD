@@ -30,6 +30,9 @@ library(naniar)
 library(pastecs)
 library(psych)
 library(data.table)
+library(plyr)
+library(lubridate)
+library(stringr)
 ```
 
 
@@ -88,6 +91,8 @@ head(demo_raw)
 ```
 
 ### Demographics Data Type Transformation
+
+Here we handle each variable separately. This doesn't scale as data gets wider, so we will use `plyr::colwise(type.convert)([data.frame])` in the future and clean-up elements like dates.
 
 ```{r}
 demo_df <- transform(demo_raw, 
@@ -168,11 +173,11 @@ psych::describe(demo_df)
 
 
 ```{r}
-plot_bar(demo_df$EDUCATION_YEARS)
+DataExplorer::plot_bar(demo_df$EDUCATION_YEARS)
 ```
 
 ```{r}
-plot_histogram(demo_df$AGE_CUR_OR_AT_DEATH)
+DataExplorer::plot_histogram(demo_df$AGE_CUR_OR_AT_DEATH)
 ```
 
 
@@ -180,7 +185,11 @@ plot_histogram(demo_df$AGE_CUR_OR_AT_DEATH)
 
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
@@ -199,15 +208,105 @@ gc()
 # encounters_path <- '../../local_data/full_data/Encounters.dsv'
 encounters_path <- 'data/full_set/Encounters.dsv'
 
-enc_df <- read_multi_character_delim_fast(encounters_path, v=FALSE, "<break>", header = TRUE)
-nrow(enc_df)
+enc_df_raw <- read_multi_character_delim_fast(encounters_path, v=FALSE, "<break>", header = TRUE)
+nrow(enc_df_raw)
+```
+
+
+```{r}
+names(enc_df_raw)
+```
+
+
+### Encounter Data Type Transformation
+
+Here we guess at most column data type conversions and handle the mistakes explicitly.
+
+```{r}
+enc_df <- plyr::colwise(type.convert, na.strings = "NA", as.is = TRUE)(enc_df_raw)
+str(enc_df)
+```
+
+```{r}
+date_fields <- grep("DATE", names(enc_df_raw), value = TRUE)
+lengths(regmatches(enc_df[, date_fields], gregexpr("NA", enc_df[, date_fields])))
+```
+
+```{r}
+sapply(as.character(enc_df$COMORBIDITY_ADMIT_DATE[1:10]), print)[[1]]
+```
+
+
+We need to handle date fields.
+
+```{r}
+enc_df  <- transform(enc_df,
+                     ADMIT_DATE = as.Date(as.character(ADMIT_DATE), format='%m-%d-%Y %H:%M'),
+                     DISCH_DATE = as.Date(as.character(DISCH_DATE), format='%m-%d-%Y %H:%M'),
+                     COMORBIDITY_ADMIT_DATE = as.Date(as.character(COMORBIDITY_ADMIT_DATE), format='%m-%d-%Y'))
+
+str(enc_df[,date_fields])
+```
+
+```{r}
+# naniar::vis_miss(enc_df[, date_fields], warn_large_data=FALSE)
+```
+
+Handle factor conversions manually.
+
+```{r}
+enc_df  <- transform(enc_df,
+                     ENC_SOURCE_DATABASE = as.factor(ENC_SOURCE_DATABASE),
+                     PAT_CLASS = as.factor(PAT_CLASS),
+                     ENC_TYPE = as.factor(ENC_TYPE),
+                     DEPT_ABBR = as.factor(DEPT_ABBR),
+                     FIN_CLASS = as.factor(FIN_CLASS),
+                     COMORBIDITY_SOURCE_DATABASE = as.factor(COMORBIDITY_SOURCE_DATABASE)
+                     )
+      
+str(enc_df)              
+```
+
+### Encounters Missing Values 
+
+**TODO:** Finished handling missing data. 
+
+```{r}
+# enc_df_raw[enc_df_raw == "NA" ] <- NA
 ```
 
 
 
+### Encounter Descriptive Statistics
+
+```{r}
+summary(enc_df)
+```
+
+
+### Comorbidities
+
+Convert binary coomorbidities to factors.
+
+```{r}
+comorbidity_fields <- names(enc_df[sapply(enc_df, is.integer)])
+enc_df[sapply(enc_df, is.integer)] <- lapply(enc_df[sapply(enc_df, is.integer)], as.factor)
+```
+
+
+Quick look at Charlson comorbidities.
+
+```{r}
+DataExplorer::plot_bar(enc_df[, comorbidity_fields])
+```
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
@@ -252,9 +351,36 @@ DataExplorer::introduce(labs_df)
 ```
 
 
-```{r}
 
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 
@@ -284,6 +410,15 @@ nrow(note_df)
 
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 ## Radiology 
 Expect 2792 records (first record is a header).
 
@@ -303,7 +438,11 @@ nrow(radio_df)
 
 
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 

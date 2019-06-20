@@ -6,8 +6,8 @@ print(paste0("Source 'load_and_convert_functions.R' Successful: ", Sys.time()))
 
 
 check_when_save <- function(filepath){
-  #'  function to see if the object can be saved to specified location
-  #'  @param filepath: a string input. Should contain the file extension
+  #' function to see if the object can be saved to specified location
+  #' @param filepath: a string input. Should contain the file extension
   
   if (file.exists(filepath)) {
     print(paste("WARNING:'", normalizePath(filepath),
@@ -24,7 +24,7 @@ check_column_names <- function(df, replace=TRUE) {
   #' function to handle column names the contain special characters
   #' @param df: data frame to check for improperly formatted column names
   #' @param replace: replace = TRUE will return a new data frame with special
-  # characters removed, FALSE will only print out problematic column names
+  #' characters removed, FALSE will only print out problematic column names
   
   temp_df <- df
   for (column_name in colnames(df)) {
@@ -113,12 +113,12 @@ read_multi_character_delim_fast <- function(filepath,
   #' @param filepath: string corresponding to the realtive fil path containing the data
   #' @param delimiter: string with the separator
   #' @param maxLength: need to guess at number or rows (which can sometimes be obtained 
-  #  using 'wc -l [file]) in order for fread() to sample correctly. Default is set
-  #  to over-estimate our largest file.
+  #' using 'wc -l [file]) in order for fread() to sample correctly. Default is set
+  #' to over-estimate our largest file.
   #' @param v (verbose): passed to fread()
   #' @param header: boolen that calls use_first_row_as_col_names().
-  # this improves upon the example above by using data.table and fread
-  # See: https://stackoverflow.com/questions/1727772
+  #' this improves upon the example above by using data.table and fread
+  #' See: https://stackoverflow.com/questions/1727772
   
   start.time <- Sys.time()
   library(data.table)
@@ -165,21 +165,21 @@ read_notes_custom_delim <- function(filepath,
   #' @param filepath: string corresponding to the realtive fil path containing the data
   #' @param delimiter: string with the separator
   #' @param maxLength: need to guess at number or rows (which can sometimes be obtained 
-  #  using 'wc -l [file]) in order for fread() to sample correctly. Default is set
-  #  to over-estimate our largest file.
+  #' using 'wc -l (file)) in order for fread() to sample correctly. Default is set
+  #' to over-estimate our largest file.
   #' @param v (verbose): passed to fread()
   #' @param header: boolen that calls use_first_row_as_col_names().
-  # this improves upon the example above by using data.table and fread
-  # See: https://stackoverflow.com/questions/1727772
+  #' this improves upon the example above by using data.table and fread
+  #' See: https://stackoverflow.com/questions/1727772
   
   start.time <- Sys.time()
   library(data.table)
   library(readr)
   gc() # clean-up
   
-  # can't use fread because comment.char() note implemented:
-  # https://github.com/Rdatatable/data.table/issues/856
-  # source file contains many clank lines
+  #' @NOTE: can't use fread because comment.char() note implemented:
+  #' https://github.com/Rdatatable/data.table/issues/856
+  #' source file contains many blank lines
   
   
   tmp_tbl <- as.data.table(read_table(filepath,

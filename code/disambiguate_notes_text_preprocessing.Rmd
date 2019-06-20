@@ -85,7 +85,7 @@ getwd() # make sure you're in the right spot! Expect "........./HAC_AD"
 This assumes that there is a separate directory for the data file. **Watch out for paths.**
 ```{r}
 # relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" # osx
-relative_sample_path <- "../../local_data/DS_PreprocessedAnonymized_Text.xlsx" # win
+# relative_sample_path <- "../../local_data/DS_PreprocessedAnonymized_Text.xlsx" # win
 ```
 
 

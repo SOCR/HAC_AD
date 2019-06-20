@@ -26,7 +26,10 @@ This notebook serves as an introduction to the data. This notebook covers data l
 
 ```{r}
 library(DataExplorer)
-library(lemon)
+library(naniar)
+library(pastecs)
+library(psych)
+library(data.table)
 ```
 
 
@@ -47,14 +50,14 @@ getwd()
 ```
 
 
-# Data Loading
+# Custom Data Read Functions
 This section contains code "blocks"" for saving data in different file formats for ingestion into different downstream programs. The source code for these functions is in the file `code/load_and_convert_functions.R` for re-use in analysis notebooks. The following function loads data from the `code/load_and_convert_functions.R` file to the current workspace.
 
 ```{r}
 source('code/load_and_convert_functions.R')
 ```
 
-## Sample Data
+## Sample Data 
 
 An example of loading the sample data into a `data.frame` from a MS Excel file:
 
@@ -65,33 +68,31 @@ An example of loading the sample data into a `data.frame` from a MS Excel file:
 
 ## Demographics
 
-Local path specification:
+### Demographics Data Load
 
-```{r include=FALSE}
-demographics_path <- '../../local_data/full_data/Demographics.dsv'
-```
-
+2,051 (not including header row)
 
 ```{r}
+# Local path specifications
+# demographics_path <- '../../local_data/full_data/Demographics.dsv'
+demographics_path <- 'data/full_set/Demographics.dsv'
+
 demo_raw <- read_multi_character_delim_fast(demographics_path, v=FALSE, "<break>", header = TRUE)
 nrow(demo_raw) #Expect 2052 total records (first record is a header).
 ```
 
 ```{r}
 # View(demo_raw)
-```
-
-
-```{r}
 names(demo_raw)
+head(demo_raw)
 ```
 
-Transform Data Types 
+### Demographics Data Type Transformation
 
 ```{r}
 demo_df <- transform(demo_raw, 
                     STUDY_PAT_ID = as.factor(STUDY_PAT_ID),
-                    SOURCE_DATABASE = as.factor(STUDY_PAT_ID),
+                    SOURCE_DATABASE = as.factor(SOURCE_DATABASE),
                     GENDER = as.factor(GENDER),
                     BIRTH_DATE = as.Date(BIRTH_DATE, format='%m-%d-%Y'),
                     DEATH_DATE = as.Date(DEATH_DATE, format='%m-%d-%Y'),
@@ -99,7 +100,7 @@ demo_df <- transform(demo_raw,
                     AGE_CUR_OR_AT_DEATH = as.numeric(AGE_CUR_OR_AT_DEATH),
                     RACE = as.factor(RACE),
                     ETHNICITY = as.factor(ETHNICITY),
-                    EDUCATION_YEARS = as.character(EDUCATION_YEARS), # this will require some cleaning 
+                    EDUCATION_YEARS = as.character(EDUCATION_YEARS), # this will require separate handling cleaning 
                     EXAM_COUNT = as.numeric(EXAM_COUNT),
                     FIRST_EXAM_DATE = as.Date(FIRST_EXAM_DATE, format='%m-%d-%Y'),
                     LAST_EXAM_DATE = as.Date(LAST_EXAM_DATE, format='%m-%d-%Y'),
@@ -113,15 +114,12 @@ sapply(demo_df, class)
 ```
 
 ```{r}
-head(demo_df$BIRTH_DATE)
-```
-
-
-```{r}
 str(demo_df)
 ```
 
-String value of "NA" not converted to true `NA`. Here we convert.
+### Demographics Missing Values
+
+String value of "NA" not converted to true `NA`. Here we convert this explicitly.
 
 ```{r}
 demo_df$EDUCATION_YEARS[demo_df$EDUCATION_YEARS == "NA" ] <- NA
@@ -129,18 +127,45 @@ demo_df$EDUCATION_YEARS[demo_df$EDUCATION_YEARS == "NA" ] <- NA
 
 
 ```{r}
-introduce(demo_df)
+DataExplorer::introduce(demo_df)
 ```
 
-```{r}
-plot_missing(demo_df)
-```
+We'll use the package `nanair` to visualize missing patterns. See the [documentation here](https://cran.r-project.org/web/packages/naniar/vignettes/naniar-visualisation.html). There's a lot more than can be done with this package. 
+
+We can see that `DEATH_DATE` and `EDUCATION_YEARS` have missing values. From the Data Dictionary:
+
+   - `DEATH_DATE`: "Patient's date of death, if deceased, otherwise null"
+   - `EDUCATION_YEARS`: "Patient's highest education level.  This is a free text field in MiChart.  Usually it contains a count of the number of years, buth occasionally a text entry is made, such as "Masters". Many are null."
 
 ```{r}
-plot_bar(demo_df)
+naniar::vis_miss(demo_df)
 ```
+
+We see 1133 values where `DEATH_DATE` and `EDUCATION_YEARS` are missing simultaneously.
+
+```{r}
+naniar::gg_miss_upset(demo_df)
+```
+
+
+### Demographics Descriptive Statistics
+
+Here are high-level (naive) 5 number summaries for each column, excluding `STUDY_PAT_ID`.
+
+```{r}
+summary(demo_df[,-1])
+```
+
+
+```{r}
+psych::describe(demo_df)
+```
+
+### Demographics Vizualization
 
 **TO DO** Handle the messiness in the education field.
+
+
 
 ```{r}
 plot_bar(demo_df$EDUCATION_YEARS)
@@ -162,19 +187,19 @@ plot_histogram(demo_df$AGE_CUR_OR_AT_DEATH)
 
 
 
-
-
 ## Encounters
+
+### Excounter Data Load
 Expect 304573 records (first record is a header).
 
 ```{r}
-encounters_path <- '../../local_data/full_data/Encounters.dsv'
-```
-
-
-```{r}
 gc()
-enc_df <- read_multi_character_delim_fast(encounters_path, "<break>", header = TRUE)
+
+# # local path specifications
+# encounters_path <- '../../local_data/full_data/Encounters.dsv'
+encounters_path <- 'data/full_set/Encounters.dsv'
+
+enc_df <- read_multi_character_delim_fast(encounters_path, v=FALSE, "<break>", header = TRUE)
 nrow(enc_df)
 ```
 
@@ -183,21 +208,53 @@ nrow(enc_df)
 
 
 
+
+
+
+
+
+
+
 ## Labs
-It looks like 'Labs' is already a `.csv` file. Expect 1516205 records (first record is a header).
+
+
+We use a bash script to look at the column names from the file directly.
+
+```{bash}
+echo "Column names:"
+head -n 1 data/full_set/Labs.dsv | tr ',' '\n' # print columns nicely using bash
+echo ""
+echo "Number of Columns:"
+head -n 1 data/full_set/Labs.dsv | sed 's/[^,]//g' | wc -c
+# sed -n -e 252p data/full_set/Labs.dsv
+```
+
+It looks like 'Labs' is already a `.csv` file. Expect 1516205 records (first record is a header). However, there are some nuances that need to be handled (the text fields have commas that are not enclosed properly)
 
 ```{r}
-labs_path <- '../../local_data/full_data/Labs.dsv'
+# # local path specifications
+# labs_path <- '../../local_data/full_data/Labs.dsv'
+labs_path <- 'data/full_set/Labs.dsv'
+
+labs_df <- read_labs(labs_path)
+nrow(labs_df)
+head(labs_df)
 ```
 
 
 ```{r}
-labs_df <- read.csv2(labs_path)
+names(labs_df)
 ```
 
 
+```{r}
+DataExplorer::introduce(labs_df)
+```
 
 
+```{r}
+
+```
 
 
 

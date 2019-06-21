@@ -1,40 +1,56 @@
 ---
 title: "Health Analytics Collaboratory (HAC) - University of Michigan"
-subtitle: "<h2><u>HAC Alzheimer's Disease Digital Health Analytics Project: Loading and Converting Data Files </u></h2>"
 author: "<h3>Ivo Dinov, Cooper Stansbury, Haiyin Liu, Bingxin Chen</h3>"
 date: "`r format(Sys.time(), '%B %Y')`"
-tags: [DSPA, SOCR, MIDAS, Big Data, Predictive Analytics] 
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
   html_document:
-    theme: spacelab
     highlight: tango
     includes:
       before_body: SOCR_header.html
-    toc: true
-    number_sections: true
+    number_sections: yes
+    theme: spacelab
+    toc: yes
     toc_depth: 2
     toc_float:
-      collapsed: false
-      smooth_scroll: true
+      collapsed: no
+      smooth_scroll: yes
+tags:
+- DSPA
+- SOCR
+- MIDAS
+- Big Data
+- Predictive Analytics
+subtitle: '<h2><u>HAC Alzheimer''s Disease Digital Health Analytics Project: Loading
+  and Converting Data Files </u></h2>'
 ---
 
 # Introduction
 
-This notebook serves as an introduction to the data. This notebook covers data loading (and saving) and basic descriptive peeks. 
+This notebook serves as an introduction to four of the five data-sets. Analysis of the clinical notes is is a separate notebook. This notebook covers data loading (and saving) and basic descriptive statistics to help generate a high-level understanding of the data. 
 
-## Session Information and Configuration
+## Dependencies
 
 ```{r}
 library(DataExplorer)
+library(ggplot2)
+library(tidyr)
+library(readxl)
 library(naniar)
 library(pastecs)
 library(psych)
 library(data.table)
 library(plyr)
 library(lubridate)
+library(knitr)
+library(kableExtra)
+library(VIM)
 library(stringr)
 ```
 
+## Session Information and Configuration
 
 This section outputs information regarding loaded dependencies and OS configuration that may help in trouble-shooting. 
 
@@ -46,7 +62,7 @@ sessionInfo()
 sapply(c('repr', 'IRdisplay', 'IRkernel'), function(p) paste(packageVersion(p)))
 ```
 
-Check the working directory. Expected to be a the 'project' level for knit. 
+Check the working directory. Expected to be a the 'project' level for `knitr`. 
 
 ```{r}
 getwd()
@@ -54,13 +70,15 @@ getwd()
 
 
 # Custom Data Read Functions
+
 This section contains code "blocks"" for saving data in different file formats for ingestion into different downstream programs. The source code for these functions is in the file `code/load_and_convert_functions.R` for re-use in analysis notebooks. The following function loads data from the `code/load_and_convert_functions.R` file to the current workspace.
 
 ```{r}
 source('code/load_and_convert_functions.R')
 ```
 
-## Sample Data 
+
+# Sample Data 
 
 An example of loading the sample data into a `data.frame` from a MS Excel file:
 
@@ -69,11 +87,40 @@ An example of loading the sample data into a `data.frame` from a MS Excel file:
 ```
 
 
-## Demographics
+# Demographics
 
-### Demographics Data Load
+From the data dictionary: 'Patient demographic data, radiology image aggregate count and date range, dementia diagnosis data sources.'
 
-2,051 (not including header row)
+```{r}
+data_dictionary_path <- 'data/Data_Dictionary.xlsx' 
+```
+
+
+```{r, echo=FALSE, results='asis'}
+header <- readxl::read_excel(data_dictionary_path, sheet = "Demographics", range="A1:B4", trim_ws = TRUE)
+
+knitr::kable(header) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+```{r, echo=FALSE, results='asis'}
+demo_data_dictionary <- readxl::read_excel(data_dictionary_path, 
+                              sheet = "Demographics", 
+                              col_types = c("text", "text", "text", "text"),
+                              col_names=TRUE, 
+                              range="A6:D23", 
+                              trim_ws = TRUE)
+
+knitr::kable(demo_data_dictionary) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+
+## Data Load
+
+Expect 2,051 rows (not including header row).
 
 ```{r}
 # Local path specifications
@@ -90,7 +137,7 @@ names(demo_raw)
 head(demo_raw)
 ```
 
-### Demographics Data Type Transformation
+## Data Type Transformation
 
 Here we handle each variable separately. This doesn't scale as data gets wider, so we will use `plyr::colwise(type.convert)([data.frame])` in the future and clean-up elements like dates.
 
@@ -122,7 +169,7 @@ sapply(demo_df, class)
 str(demo_df)
 ```
 
-### Demographics Missing Values
+## Missing Values
 
 String value of "NA" not converted to true `NA`. Here we convert this explicitly.
 
@@ -132,8 +179,21 @@ demo_df$EDUCATION_YEARS[demo_df$EDUCATION_YEARS == "NA" ] <- NA
 
 
 ```{r}
-DataExplorer::introduce(demo_df)
+get_quick_peek <- function  (df){
+  #' function to get quick summary table of data.frame
+  #' @param df: data.frame to summarize
+  
+  knitr::kable(t(DataExplorer::introduce(df))) %>%
+    kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+  
+}
 ```
+
+```{r}
+get_quick_peek(demo_df)
+```
+
+
 
 We'll use the package `nanair` to visualize missing patterns. See the [documentation here](https://cran.r-project.org/web/packages/naniar/vignettes/naniar-visualisation.html). There's a lot more than can be done with this package. 
 
@@ -153,52 +213,111 @@ naniar::gg_miss_upset(demo_df)
 ```
 
 
-### Demographics Descriptive Statistics
 
-Here are high-level (naive) 5 number summaries for each column, excluding `STUDY_PAT_ID`.
+## Descriptive Statistics
+
 
 ```{r}
-summary(demo_df[,-1])
+# high-level (naive) 5 number summaries for each column, excluding `STUDY_PAT_ID`.
+# summary(demo_df[,-1])
 ```
 
 
 ```{r}
-psych::describe(demo_df)
+get_descriptive_statistics_table <- function(df, quantiles= (1:10) / 10) {
+  #' function to return a kable using psych::describe
+  #' @param df: a data.frame to summarize
+  #' @param quantiles: vector range(0,1) for output quantiles, defaults to deciles
+  
+  summary <- psych::describe(df, 
+                                check=TRUE,
+                                ranges=TRUE, 
+                                quant = quantiles,
+                                IQR=TRUE)
+
+  knitr::kable(summary) %>%
+    kableExtra::kable_styling()
+}
 ```
 
-### Demographics Vizualization
+```{r}
+get_descriptive_statistics_table(demo_df)
+```
+
+
+
+## Basic Vizualization
 
 **TO DO** Handle the messiness in the education field.
-
-
 
 ```{r}
 DataExplorer::plot_bar(demo_df$EDUCATION_YEARS)
 ```
 
+
+
 ```{r}
-DataExplorer::plot_histogram(demo_df$AGE_CUR_OR_AT_DEATH)
+
+get_numeric_distributions <- function(df) {
+  #' function to return formatted histogram/denisity overlays for numeric variables
+  #' @param df: a data.frame to use 
+  
+  numeric_fields <- names(df[sapply(df, is.numeric)])
+  
+  demo_df[, numeric_fields] %>%
+      tidyr::gather() %>%
+          ggplot(aes(x=value,y=..density..))+
+  
+              ggtitle('Distributions of Numeric Variables (un-scaled)') +
+  
+              facet_wrap(~ key, scales = "free") +
+              geom_histogram(fill=I("orange"), col=I("black"), bins = 50) +
+  
+              facet_wrap(~ key, scales = "free") +
+              geom_density(color="blue", fill='light blue', alpha = 0.4)
+}
+```
+
+
+```{r}
+get_numeric_distributions(demo_df)
+```
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+# Encounters
+
+
+```{r, echo=FALSE, results='asis'}
+header <- readxl::read_excel(data_dictionary_path, sheet = "Encounters", range="A1:B4", trim_ws = TRUE)
+
+knitr::kable(header) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+```{r, echo=FALSE, results='asis'}
+enc_data_dictionary <- readxl::read_excel(data_dictionary_path, 
+                              sheet = "Encounters", 
+                              col_types = c("text", "text", "text", "text"),
+                              col_names=TRUE, 
+                              range="A6:D67", 
+                              trim_ws = TRUE)
+
+knitr::kable(enc_data_dictionary) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
 ```
 
 
 
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-
-
-## Encounters
-
-### Excounter Data Load
+## Data Load
 Expect 304573 records (first record is a header).
 
 ```{r}
@@ -218,19 +337,32 @@ names(enc_df_raw)
 ```
 
 
-### Encounter Data Type Transformation
+## Data Type Transformation
 
 Here we guess at most column data type conversions and handle the mistakes explicitly.
 
 ```{r}
 enc_df <- plyr::colwise(type.convert, na.strings = "NA", as.is = TRUE)(enc_df_raw)
-str(enc_df)
 ```
 
 ```{r}
-date_fields <- grep("DATE", names(enc_df_raw), value = TRUE)
-lengths(regmatches(enc_df[, date_fields], gregexpr("NA", enc_df[, date_fields])))
+get_date_fields_by_name <- function(df){
+  #' function to return string vector of column names containing 'DATE'
+  #' @param df: data.frame 
+  
+  date_fields <- grep("DATE", names(df), value = TRUE)
+  print("Printing n 'NA' string values in columns with *DATE* in the name:" )
+  print(unlist(lengths(regmatches(df[, date_fields], gregexpr("NA", df[, date_fields])))))
+  return(date_fields)
+}
+
+enc_date_fields <- get_date_fields_by_name(enc_df)
 ```
+
+```{r}
+
+```
+
 
 ```{r}
 sapply(as.character(enc_df$COMORBIDITY_ADMIT_DATE[1:10]), print)[[1]]
@@ -245,7 +377,7 @@ enc_df  <- transform(enc_df,
                      DISCH_DATE = as.Date(as.character(DISCH_DATE), format='%m-%d-%Y %H:%M'),
                      COMORBIDITY_ADMIT_DATE = as.Date(as.character(COMORBIDITY_ADMIT_DATE), format='%m-%d-%Y'))
 
-str(enc_df[,date_fields])
+str(enc_df[,enc_date_fields])
 ```
 
 ```{r}
@@ -263,38 +395,58 @@ enc_df  <- transform(enc_df,
                      FIN_CLASS = as.factor(FIN_CLASS),
                      COMORBIDITY_SOURCE_DATABASE = as.factor(COMORBIDITY_SOURCE_DATABASE)
                      )
-      
-str(enc_df)              
 ```
-
-### Encounters Missing Values 
-
-**TODO:** Finished handling missing data. 
-
-```{r}
-# enc_df_raw[enc_df_raw == "NA" ] <- NA
-```
-
-
-
-### Encounter Descriptive Statistics
-
-```{r}
-summary(enc_df)
-```
-
-
-### Comorbidities
 
 Convert binary coomorbidities to factors.
 
 ```{r}
 comorbidity_fields <- names(enc_df[sapply(enc_df, is.integer)])
 enc_df[sapply(enc_df, is.integer)] <- lapply(enc_df[sapply(enc_df, is.integer)], as.factor)
+
+str(enc_df)
+```
+
+## Missing Values 
+
+Replace string "NA" with `NA` in character fields.
+
+```{r}
+enc_character_fields <- names(enc_df[sapply(enc_df, is.character)])
+enc_df[, enc_character_fields] <- enc_df[, enc_character_fields] %>% dplyr::na_if("NA")
+```
+
+```{r}
+# naniar::vis_miss(enc_df, warn_large_data = FALSE)
+```
+
+```{r}
+gg_miss_var(enc_df)
+res <- summary(aggr(enc_df, sortVar=TRUE))$combinations
 ```
 
 
+## Descriptive Statistics
+
+```{r}
+# summary(enc_df)
+```
+
+
+```{r}
+# get_descriptive_statistics_table(enc_df)
+```
+
+
+
+```{r}
+# get_numeric_distributions(enc_df)
+```
+
+
+## Comorbidities
+
 Quick look at Charlson comorbidities.
+
 
 ```{r}
 DataExplorer::plot_bar(enc_df[, comorbidity_fields])
@@ -311,10 +463,28 @@ DataExplorer::plot_bar(enc_df[, comorbidity_fields])
 
 
 
+# Labs
+
+```{r, echo=FALSE, results='asis'}
+header <- readxl::read_excel(data_dictionary_path, sheet = "Labs", range="A1:B4", trim_ws = TRUE)
+
+knitr::kable(header) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
 
 
 
-## Labs
+```{r, echo=FALSE, results='asis'}
+demo_data_dictionary <- readxl::read_excel(data_dictionary_path, 
+                              sheet = "Labs", 
+                              col_types = c("text", "text", "text", "text"),
+                              col_names=TRUE, 
+                              range="A6:D26", 
+                              trim_ws = TRUE)
+
+knitr::kable(demo_data_dictionary) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
 
 
 We use a bash script to look at the column names from the file directly.
@@ -347,7 +517,18 @@ names(labs_df)
 
 
 ```{r}
-DataExplorer::introduce(labs_df)
+head(labs_df)
+```
+
+
+```{r}
+lab_date_fields <- get_date_fields_by_name(labs_df)
+```
+
+
+
+```{r}
+# get_quick_peek(labs_df)
 ```
 
 
@@ -375,6 +556,9 @@ DataExplorer::introduce(labs_df)
 
 
 
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -382,9 +566,7 @@ DataExplorer::introduce(labs_df)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
-
-## Notes
+# Notes
 Expect 11078079 records (first record is a header).
 
 **WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
@@ -404,13 +586,6 @@ nrow(note_df)
 
 
 
-
-
-
-
-
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -419,7 +594,7 @@ nrow(note_df)
 
 
 
-## Radiology 
+# Radiology 
 Expect 2792 records (first record is a header).
 
 ```{r}
@@ -450,7 +625,7 @@ nrow(radio_df)
 
 
 
-#Apppendix: Custom Load and Convert Functions 
+# Apppendix: Custom Load and Convert Functions 
 
 Below is a bash shell commad to print the functions in `code/load_and_convert_functions.R` to the console:
 
@@ -460,7 +635,7 @@ Below is a bash shell commad to print the functions in `code/load_and_convert_fu
 
 # Appendix: Saving Data
 
-## R Objects
+## Saving R Objects
 R changes rapidly. File types specific to R may not be robust to future changes in technology. ** Note on `save`:** the R function `save` stores both the object and the name of the object. This is important when loading objects back into R. `.Rdata` (sometimes `.Rda`) files are specific to the R environment. They can store arbitrary numbers of objects in a single file. For more documentation I suggest: 
 [YaRrr/rdata-files](https://bookdown.org/ndphillips/YaRrr/rdata-files.html).
 
@@ -474,7 +649,8 @@ The following block demonstrates saving both `.Rdata` or `.rds` format objects.
 ```
 
 
-## CSV
+## Saving CSV Files
+
 This is the most robust long-term file storage format. Note that there are several possible arguments for `write.csv()` that may be necessary to specify depending on downstream requirements.
 
 ```{r}

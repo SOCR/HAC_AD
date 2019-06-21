@@ -236,9 +236,9 @@ read_labs <- function(filepath) {
                         col_names = FALSE,
                         progress=TRUE)
   #' @NOTE: these parameters are hard-coded specifically for this file
-  tmp_tbl <- as.data.frame(t(sapply(labs_df$X1, get_first_n_splits, pattern=",", n=20)))
-  rownames(tmp_tbl) <- NULL
-  df <- use_first_row_as_col_names(test)
+  tmp_tbl_2 <- as.data.frame(t(sapply(tmp_tbl$X1, get_first_n_splits, pattern=",", n=20)))
+  rownames(tmp_tbl_2) <- NULL
+  df <- use_first_row_as_col_names(tmp_tbl_2)
   print_dimensionality(df)
   end.time <- Sys.time()
   print(paste("Execution time:", end.time - start.time))

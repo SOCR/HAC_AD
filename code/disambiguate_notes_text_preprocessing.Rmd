@@ -26,7 +26,7 @@ tags:
 - Predictive Analytics
 - Computable Phenotypes
 subtitle: '<h2><u>HAC Alzheimer''s Disease Digital Health Analytics Project: Text
-  Preprocessing</u></h2>'
+  Preprocessing </u></h2>'
 ---
 
 # Processing Logistics
@@ -94,6 +94,27 @@ This assumes that there is a separate directory for the data file. **Watch out f
 source('code/load_and_convert_functions.R')
 raw_data.df <-  read_xlsx_from_path(filepath = relative_sample_path)
 ```
+
+# Notes
+Expect 11078079 records (first record is a header).
+
+**WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
+
+```{r}
+notes_path <- '../../local_data/full_data/Notes.dsv'
+```
+
+
+
+```{r}
+gc()
+source('code/load_and_convert_functions.R')
+note_df <- read_notes_custom_delim(notes_path, v=FALSE, '<break>', header = TRUE)
+nrow(note_df)
+```
+
+
+
 
 # Subset Text Field
 Subset the `data.frame`. We retain the text notes and ID fields for mapping back to the data.frame.

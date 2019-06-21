@@ -69,7 +69,7 @@ getwd()
 ```
 
 
-# Custom Data Read Functions
+# Source Custom Functions
 
 This section contains code "blocks"" for saving data in different file formats for ingestion into different downstream programs. The source code for these functions is in the file `code/load_and_convert_functions.R` for re-use in analysis notebooks. The following function loads data from the `code/load_and_convert_functions.R` file to the current workspace.
 
@@ -351,8 +351,6 @@ get_date_fields_by_name <- function(df){
   #' @param df: data.frame 
   
   date_fields <- grep("DATE", names(df), value = TRUE)
-  print("Printing n 'NA' string values in columns with *DATE* in the name:" )
-  print(unlist(lengths(regmatches(df[, date_fields], gregexpr("NA", df[, date_fields])))))
   return(date_fields)
 }
 
@@ -486,6 +484,8 @@ knitr::kable(demo_data_dictionary) %>%
   kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
 ```
 
+## Load Data
+
 
 We use a bash script to look at the column names from the file directly.
 
@@ -521,8 +521,11 @@ head(labs_df)
 ```
 
 
+## Data Type Transformation
+
 ```{r}
-lab_date_fields <- get_date_fields_by_name(labs_df)
+# lab_date_fields <- get_date_fields_by_name(labs_df)
+# lab_date_fields
 ```
 
 
@@ -533,6 +536,10 @@ lab_date_fields <- get_date_fields_by_name(labs_df)
 
 
 
+## Missing Data
+
+## Descriptive Statistics
+## Vizualization
 
 
 
@@ -564,41 +571,42 @@ lab_date_fields <- get_date_fields_by_name(labs_df)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-# Notes
-Expect 11078079 records (first record is a header).
-
-**WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
-
-```{r}
-notes_path <- '../../local_data/full_data/Notes.dsv'
-```
-
-
-
-```{r}
-gc()
-source('code/load_and_convert_functions.R')
-note_df <- read_notes_custom_delim(notes_path, v=FALSE, '<break>', header = TRUE)
-nrow(note_df)
-```
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 
 # Radiology 
 Expect 2792 records (first record is a header).
 
+
+
+```{r, echo=FALSE, results='asis'}
+header <- readxl::read_excel(data_dictionary_path, sheet = "Radiology", range="A1:B4", trim_ws = TRUE)
+
+knitr::kable(header) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+
+
+```{r, echo=FALSE, results='asis'}
+demo_data_dictionary <- readxl::read_excel(data_dictionary_path, 
+                              sheet = "Radiology", 
+                              col_types = c("text", "text", "text", "text"),
+                              col_names=TRUE, 
+                              range="A6:D27", 
+                              trim_ws = TRUE)
+
+knitr::kable(demo_data_dictionary) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+
+## Load Data
+
 ```{r}
-radiology_path <- '../../local_data/full_data/Radiology.dsv'
+# radiology_path <- '../../local_data/full_data/Radiology.dsv'
+radiology_path <- 'data/full_set/Radiology.dsv'
 ```
 
 
@@ -609,8 +617,13 @@ nrow(radio_df)
 ```
 
 
+## Data Type Conversion
 
 
+## Missing Data
+
+## Descriptive Statistics
+## Vizualization
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -625,7 +638,7 @@ nrow(radio_df)
 
 
 
-# Apppendix: Custom Load and Convert Functions 
+# Apppendix I: Custom Functions 
 
 Below is a bash shell commad to print the functions in `code/load_and_convert_functions.R` to the console:
 
@@ -633,7 +646,7 @@ Below is a bash shell commad to print the functions in `code/load_and_convert_fu
 # cat code/load_and_convert_functions.R
 ```
 
-# Appendix: Saving Data
+# Appendix II: Saving Data
 
 ## Saving R Objects
 R changes rapidly. File types specific to R may not be robust to future changes in technology. ** Note on `save`:** the R function `save` stores both the object and the name of the object. This is important when loading objects back into R. `.Rdata` (sometimes `.Rda`) files are specific to the R environment. They can store arbitrary numbers of objects in a single file. For more documentation I suggest: 

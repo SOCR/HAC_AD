@@ -505,7 +505,7 @@ It looks like 'Labs' is already a `.csv` file. Expect 1516205 records (first rec
 # labs_path <- '../../local_data/full_data/Labs.dsv'
 labs_path <- 'data/full_set/Labs.dsv'
 
-labs_df <- read_labs(labs_path)
+labs_df <- read_labs_dsv(labs_path)
 nrow(labs_df)
 head(labs_df)
 ```

@@ -156,62 +156,6 @@ read_multi_character_delim_fast <- function(filepath,
 }
 
 
-read_notes_custom_delim <- function(filepath, 
-                                    delimiter,
-                                    maxLength=20000000,
-                                    skip=FALSE,
-                                    v=TRUE, header=TRUE) {
-  #' function to read the NOTES file delimited with a multi-character separator
-  #' @param filepath: string corresponding to the realtive fil path containing the data
-  #' @param delimiter: string with the separator
-  #' @param maxLength: need to guess at number or rows (which can sometimes be obtained 
-  #' using 'wc -l (file)) in order for fread() to sample correctly. Default is set
-  #' to over-estimate our largest file.
-  #' @param v (verbose): passed to fread()
-  #' @param header: boolen that calls use_first_row_as_col_names().
-  #' this improves upon the example above by using data.table and fread
-  #' See: https://stackoverflow.com/questions/1727772
-  
-  start.time <- Sys.time()
-  library(data.table)
-  library(readr)
-  gc() # clean-up
-  
-  #' @NOTE: can't use fread because comment.char() note implemented:
-  #' https://github.com/Rdatatable/data.table/issues/856
-  #' source file contains many blank lines
-  
-  
-  tmp_tbl <- as.data.table(read_table(filepath,
-                        n_max = maxLength,
-                        col_names = FALSE,
-                        skip_empty_rows=skip,
-                        progress=TRUE))
-  
-  gc() # careful with memory
-  print('1-d table read successful.')
-  print(paste('n raw records read: ', nrow(tmp_tbl)))
-  df <- as.data.frame(setDT(tmp_tbl)[, tstrsplit(tmp_tbl$X1, delimiter)])
-  print('delimiter parsing successful.')
-  print(paste('n parsed records: ', nrow(df)))
-  
-  if (header) {
-    df <- use_first_row_as_col_names(df)
-    print_dimensionality(df)
-    end.time <- Sys.time()
-    print(paste("Execution time:", end.time - start.time))
-    return(df)
-    gc()
-  } else {
-    print_dimensionality(df)
-    end.time <- Sys.time()
-    print(paste("Execution time:", end.time - start.time))
-    return(df)
-    gc()
-  }
-}
-
-
 get_first_n_splits <- function(string, pattern, n) {
   #' function to split a st ring on the first n occurences of a given input
   #' @param string: the string value split (expected to be passed via 'apply')
@@ -222,8 +166,41 @@ get_first_n_splits <- function(string, pattern, n) {
 }
 
 
+read_notes_dsv <- function(filepath) {
+  #' function to read the NOTES file delimited with a multi-character separator
+  #' @param filepath: string corresponding to the realtive fil path containing the data
+  #' See: https://stackoverflow.com/questions/1727772
+  
+  start.time <- Sys.time()
+  library(data.table)
+  library(readr)
+  gc() # clean-up
+  tmp_tbl <- read_table(filepath,
+                        n_max = 20000000,
+                        col_names = FALSE,
+                        skip_empty_rows=FALSE,
+                        progress=TRUE)
+  print('1-d table read successful.')
+  print(paste('n raw records read: ', nrow(tmp_tbl)))
+  
+  
+  # df <- as.data.frame(t(sapply(tmp_tbl$X1, get_first_n_splits, pattern=",", n=20)))
+  # rownames(df) <- NULL
+  
+  
+  df <- as.data.frame(setDT(tmp_tbl)[, tstrsplit(tmp_tbl$X1, "<break>")])
+  print('delimiter parsing successful.')
+  print(paste('n parsed records: ', nrow(df)))
+  df <- use_first_row_as_col_names(df)
+  print_dimensionality(df)
+  end.time <- Sys.time()
+  print(paste("Execution time:", end.time - start.time))
+  return(df)
+  gc()
+}
 
-read_labs <- function(filepath) {
+
+read_labs_dsv <- function(filepath) {
   #' function to read the labs.dsv into a new data.frame
   #' this function is intended ONLY for the labs file
   #' @param filepath string corresponding to the relative filepath
@@ -234,7 +211,7 @@ read_labs <- function(filepath) {
   gc()
   tmp_tbl <- read_table(filepath,
                         col_names = FALSE,
-                        progress=TRUE)
+                        progress = TRUE)
   #' @NOTE: these parameters are hard-coded specifically for this file
   tmp_tbl_2 <- as.data.frame(t(sapply(tmp_tbl$X1, get_first_n_splits, pattern=",", n=20)))
   rownames(tmp_tbl_2) <- NULL

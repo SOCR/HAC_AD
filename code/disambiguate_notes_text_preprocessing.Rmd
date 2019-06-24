@@ -54,6 +54,8 @@ library(tidytext)
 library(tidyr)
 library(dplyr)
 library(reshape2)
+library(knitr)
+library(kableExtra)
 
 ## another text_processing library that may be worth considering, spaCy is extremely powerful
 ## https://github.com/quanteda/spacyr
@@ -74,6 +76,41 @@ sessionInfo()
 sapply(c('repr', 'IRdisplay', 'IRkernel'), function(p) paste(packageVersion(p)))
 ```
 
+# Source Custom Functions
+Source the `load_and_convert_functions.R` from the local file.
+
+```{r}
+source('code/load_and_convert_functions.R')
+```
+
+# Data Dictionary 
+ Overview of the data:
+
+```{r, echo=FALSE, results='asis'}
+data_dictionary_path <- 'data/Data_Dictionary.xlsx' 
+header <- readxl::read_excel(data_dictionary_path, sheet = "Notes", range="A1:B4", trim_ws = TRUE)
+
+knitr::kable(header) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+
+
+```{r, echo=FALSE, results='asis'}
+enc_data_dictionary <- readxl::read_excel(data_dictionary_path, 
+                              sheet = "Notes", 
+                              col_types = c("text", "text", "text", "text"),
+                              col_names=TRUE, 
+                              range="A6:D18", 
+                              trim_ws = TRUE)
+
+knitr::kable(enc_data_dictionary) %>%
+  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+
 # Load data
 Load the data from the source file. Assumes file in `.xlsx` format. 
 
@@ -82,38 +119,100 @@ Load the data from the source file. Assumes file in `.xlsx` format.
 getwd() # make sure you're in the right spot! Expect "........./HAC_AD"
 ```
 
+## Sample Data 
+
 This assumes that there is a separate directory for the data file. **Watch out for paths.**
 ```{r}
 # relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" # osx
 # relative_sample_path <- "../../local_data/DS_PreprocessedAnonymized_Text.xlsx" # win
+# raw_data_df <-  read_xlsx_from_path(filepath = relative_sample_path)
 ```
 
-
-```{r}
-# here we use the load and convert functions in the local file
-source('code/load_and_convert_functions.R')
-raw_data.df <-  read_xlsx_from_path(filepath = relative_sample_path)
-```
-
-# Notes
-Expect 11078079 records (first record is a header).
+## Full Data Set
 
 **WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
 
 ```{r}
-notes_path <- '../../local_data/full_data/Notes.dsv'
+notes_path <- 'data/full_set/Notes.dsv'
+# notes_path <- "data/full_set/TEST_Notes.dsv"
 ```
 
+
+**NOTE:** The parameters on this function affect the total number of rows in the resulting `data.frame`. The following note is from the data office:
+
+  _"The text fields have been cleaned up so that carriage return/line feed and tab characters have been converted into a space..... I noticed that a few slipped through, however,      so that you will occasionally see two spaces together."_
+
+```{bash}
+wc -l "data/full_set/Notes.dsv"
+```
+
+Something breaks down in the middle of this file. At the beginnning, each record is on it's own line, but at the end this is no longer the case. 
+
+```{bash}
+head -n 2 "data/full_set/Notes.dsv"
+```
+
+```{bash}
+tail -n 10 "data/full_set/Notes.dsv"
+```
+
+After some manual searching, we can see that this is the first section of the file that breaks. Lines 178791-178793 should be a single record (line), but they are not.
+
+```{bash}
+sed -n "178791,178794p" "data/full_set/Notes.dsv"
+```
+
+```{bash}
+head -n 178789 "data/full_set/Notes.dsv" > "data/full_set/TEST_Notes.dsv"
+```
+
+Temporarily set the path to a testing file (the records suspected to be correct...)
+
+```{r}
+notes_path <- "data/full_set/TEST_Notes.dsv"
+```
 
 
 ```{r}
-gc()
 source('code/load_and_convert_functions.R')
-note_df <- read_notes_custom_delim(notes_path, v=FALSE, '<break>', header = TRUE)
-nrow(note_df)
+raw_data_df <- read_notes_dsv(filepath = notes_path)
+head(raw_data_df)
+```
+
+## Sampling from Full Data Set
+Randomly sample from the full set to speed up development while maximizing exposure to corner cases.
+
+```{r}
+sampled_df <- raw_data_df[sample(nrow(raw_data_df), 1000), ]
+head(sampled_df)
 ```
 
 
+
+
+## Data Type Transformations
+
+```{r}
+names(sampled_df)
+```
+
+
+```{r}
+str(sampled_df)
+```
+
+```{r}
+transformed_df <- transform(sampled_df, 
+                    SOURCE_DATABASE = as.factor(SOURCE_DATABASE),
+                    NOTE_TYPE = as.factor(NOTE_TYPE),
+                    DATE_OF_SERVICE = as.Date(DATE_OF_SERVICE, format='%m-%d-%Y %H:%M'),
+                    CREATE_DATETIME = as.Date(CREATE_DATETIME, format='%m-%d-%Y %H:%M'),
+                    AUTHOR_SERVICE = as.factor(AUTHOR_SERVICE), 
+                    DEPT_ABBR = as.factor(DEPT_ABBR), 
+                    DEPT_NAME = as.factor(DEPT_NAME)) 
+
+str(transformed_df)
+```
 
 
 # Subset Text Field
@@ -121,18 +220,18 @@ Subset the `data.frame`. We retain the text notes and ID fields for mapping back
 
 ```{r}
 subset_dataframe <- function(my_dataframe, column_vector) {
-  # 'function to subset a dataframe based on list of columns, returns new data.frame
-  # '@param my_dataframe: a data.frame from which to derive the subset
-  # '@param column_vector: list of strings containing columns to included in new data.frame
+  #' function to subset a dataframe based on list of columns, returns new data.frame
+  #' @param my_dataframe: a data.frame from which to derive the subset
+  #' @param column_vector: list of strings containing columns to included in new data.frame
   subset.df <- subset(my_dataframe, select=column_vector)
   return(subset.df)
 }
 
 # list of columns to process
-cols = c('STUDY_PAT_ID', 'STUDY_ENC_ID', 'STUDY_NOTE_ID','DS_PreprocessedAnonymized_Text')
-text.df <- subset_dataframe(raw_data.df, cols)
+cols = c('STUDY_PAT_ID', 'STUDY_ENC_ID', 'STUDY_NOTE_ID','TEXT')
+text_df <- subset_dataframe(sampled_df, cols) # note, working with sampled DF
 
-head(text.df , 2)
+head(text_df , 2)
 ```
 
 # Term Frequencies
@@ -141,9 +240,9 @@ Below we define a function to calculate raw counts and relative frequecies from 
 
 ```{r}
 get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
-  # 'function to return a new data.frame w/ term frequencies from a specified column
-  # '@df: data.frame containing column to use
-  # '@columnName: colName of the column to use; expects a string value not index position
+  #' function to return a new data.frame w/ term frequencies from a specified column
+  #' @param df: data.frame containing column to use
+  #' @param columnName: colName of the column to use; expects a string value not index position
   tmp_corpus <- VCorpus(VectorSource(df[, columnName]))
   tdm <- as.matrix(TermDocumentMatrix(tmp_corpus))
   frequency_df <- data.frame(token = rownames(tdm), 
@@ -163,7 +262,7 @@ get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
   return(frequency_df)
 }
 
-raw_frequencies <- get_token_frequecy_from_column(text.df, 'DS_PreprocessedAnonymized_Text', sortByHighFQ=TRUE)
+raw_frequencies <- get_token_frequecy_from_column(text_df, 'TEXT', sortByHighFQ=TRUE)
 head(raw_frequencies, 50)
 ```
 
@@ -171,9 +270,9 @@ If we need to save a relative frequency file for CARD for any reason, here is a 
 
 ```{r}
 create_term_frequency_file_for_card <- function(term_frequency_df) {
-  # 'function to save a file with term frequencies in CARD format:
-  # ' each line formated as 'word \t normalized_frequency'.(Normalized frequency = (word frequency)/(Total # of words))
-  # '@term_frequency_df: data.frame containing word frequency information
+  #' function to save a file with term frequencies in CARD format:
+  #' each line formated as 'word \t normalized_frequency'.(Normalized frequency = (word frequency)/(Total # of words))
+  #' @param term_frequency_df: data.frame containing word frequency information
   today_date = format(Sys.time(), "%m%d%Y")
   filename = "word_frequencies.csv" # note, this needs to be changed
   save_path = paste("data/", today_date, filename , sep="")
@@ -198,8 +297,8 @@ We utilize on [CARD](https://sbmi.uth.edu/ccb/resources/abbreviation.htm):
   - Wu Y, Denny JC, Trent Rosenbloom S, Miller RA, Giuse DA, Wang L, et al. [A long journey to short abbreviations: developing an open-source framework for clinical abbreviation recognition and disambiguation (CARD)](https://www.ncbi.nlm.nih.gov/pubmed/27539197). J Am Med Inform Assoc. 2017 Apr 1;24(e1):e79-86. 
 
 ```{r}
-text.df[1,'STUDY_NOTE_ID']
-text.df[1, 'DS_PreprocessedAnonymized_Text']
+text_df[1,'STUDY_NOTE_ID']
+text_df[1, 'TEXT']
 ```
 
 
@@ -208,13 +307,24 @@ These functions are used during the disambiguation process.
 
 ** Note: ** using `system` presuposes that the system is compatible with the system listed in `sessionInfo()`. It should be noted that this command behaves differently on different OS. See docs for more information: [system documentation](https://stat.ethz.ch/R-manual/R-devel/library/base/html/system.html). 
 
+## CARD Resource Files
+These files are inputs for the `.jar` invocation of CARD.
+
+```{r}
+word_map <- "code/card_inputs/word.txt" 
+abbr_map <- "code/card_inputs/abbr.txt"
+profile_dir <- "code/card_inputs/profile/" 
+cui_map <- "code/card_inputs/VABBR_DS_beta.txt.add_semantic_type"
+```
+
+
 
 ```{r}
 execute_card <- function(row) {
-  # 'function to generate card output based on a clinical note piped from stdin
-  # '@row: a row in a dataframe conatined a char string that is a clinical note
+  #' function to generate card output based on a clinical note piped from stdin
+  #' @param row: a row in a dataframe conatined a char string that is a clinical note
   clinical_note_string <- as.String(row)
-  command <- "java -classpath ./bin MetaMapWrapper.SenseDisambiguationText"
+  command <- paste("java -jar code/TightSenseClustering.jar", word_map, abbr_map, profile_dir, cui_map)
   
   detected_abbreviations <- system(command,
                    input = clinical_note_string,
@@ -229,8 +339,8 @@ execute_card <- function(row) {
 
 
 check_if_begin_sentence <- function(str_line) {
-  # 'boolean function returns 'T' iff str_line starts with 'Abbr:'
-  # '@param str_line: a string value
+  #' boolean function returns 'T' iff str_line starts with 'Abbr:'
+  #' @param str_line: a string value
   if ("BEGIN_SENTENCE:" %in% str_line) {
       return(TRUE)
   } else{
@@ -239,8 +349,8 @@ check_if_begin_sentence <- function(str_line) {
 }
 
 parse_abbr_line <- function(str_line) {
-  # 'function to parse a tab separated line and return detected and long-form abbreviations
-  # '@param str_line: string to parse into tab-separated list
+  #' function to parse a tab separated line and return detected and long-form abbreviations
+  #' @param str_line: string to parse into tab-separated list
   parsed_line <- strsplit(str_line, '[\t]') [[1]]
   detected_text <- parsed_line[2] # index of detected text
   long_form_text <- parsed_line[4] # index of long-form text
@@ -249,14 +359,13 @@ parse_abbr_line <- function(str_line) {
 
 
 perform_substitions <- function(sentence, abbreviation_list, toPrint=TRUE) {
-  # 'function to return a new sentence with CARD predictions substituted
-  # '@sentence: a string containing the sentence with predicted abbreviations 
-  # '@abbreviation_list: list of detected abbrevations
-  # '@toPrint: boolean argument specifiying whether or not to print output to console
+  #' function to return a new sentence with CARD predictions substituted
+  #' @param sentence: a string containing the sentence with predicted abbreviations 
+  #' @param abbreviation_list: list of detected abbrevations
+  #' @param toPrint: boolean argument specifiying whether or not to print output to console
   new_sentence <- sentence
   
-  # only detect distinct tokens (is this a correct assumption?)
-  # use first match (sub) to replace abbreviations in order
+  #' @NOTE use first match (sub) to replace abbreviations in order
   
   for (abbr in abbreviation_list) {
       parsed_abbr <- parse_abbr_line(abbr)
@@ -285,25 +394,26 @@ We pipe each record (clinical note) to a rewritten `MetaMapWrapper.SenseDisambig
 ```{r}
 ### IMPORTANT NOTE: this function REQUIRES being run from the given path as wd, or else CARD can't find the classes on classpath
 # set execution path for this chunk
-exe_path <- 'TightClusteringSenseDetection_v2' # required to run 'MetaMapWrapper.SenseDisambiguationText'
-setwd(exe_path) 
-getwd()
+
+# exe_path <- 'TightClusteringSenseDetection_v2' # required to run 'MetaMapWrapper.SenseDisambiguationText'
+# setwd(exe_path) 
+# getwd()
 
 
 disambiguate_note_contents <- function(row, toPrint=TRUE) {
-  # 'function to perform substitions for CARD abbreviation disambiguation
-  # '@row: row containing clinical note to disambiguate
-  # '@toPrint: boolean argument specifiying whether or not to print output to console, passed to substitution f(x)
+  #' function to perform substitions for CARD abbreviation disambiguation
+  #' @param row: row containing clinical note to disambiguate
+  #' @param toPrint: boolean argument specifiying whether or not to print output to console, passed to substitution f(x)
   
-  # generate CARD output for current row, returns a list()
+  #' @NOTE generate CARD output for current row, returns a list()
   disambiguation_predictions <- execute_card(row)
   
   num_lines <- length(disambiguation_predictions)
   disamgiguated_note <- ""
   total_abbreviations <- 0
 
-  # iterate through next lines holding position at a sentence
-  # check if 'is sentence' by matching BEGIN_SENTENCE
+  #' @NOTE iterate through next lines holding position at a sentence
+  #' @NOTE check if 'is sentence' by matching BEGIN_SENTENCE
   for (idx in 1:num_lines) {
       if (check_if_begin_sentence(disambiguation_predictions[[idx]]))  {
         # this will be the index and value of the sentence following the BEGIN_SENTENCE flag
@@ -324,12 +434,12 @@ disambiguate_note_contents <- function(row, toPrint=TRUE) {
         } else{
           abbreviation_predictions <- NULL
         }
-        
+
         if (toPrint) {
           print('####################################')
           print(paste('original sentence:', current_sentence))
         }
-      
+
         num_abbreviations_detected <- 0
 
         # only call substitions on predicted abbrs
@@ -341,9 +451,9 @@ disambiguate_note_contents <- function(row, toPrint=TRUE) {
           # always add sentence regardless if abbrs found
           disamgiguated_note <- paste(disamgiguated_note, current_sentence)
         } # end if abbreviation list NULL
-        
+
         total_abbreviations <- total_abbreviations + num_abbreviations_detected
-        
+
         if (toPrint) {
           print(paste('total abbreviations detected: ', num_abbreviations_detected))
         }
@@ -352,38 +462,38 @@ disambiguate_note_contents <- function(row, toPrint=TRUE) {
   return(disamgiguated_note)
 } 
 
-# # TESTING
-# sapply(text.df$DS_PreprocessedAnonymized_Text[1:4], disambiguate_note_contents, toPrint=FALSE)
+# #TESTING
+# sapply(text_df$TEXT[1:4], disambiguate_note_contents, toPrint=TRUE)
 
 
-text.df$card_disambiguated_note <- sapply(text.df$DS_PreprocessedAnonymized_Text, disambiguate_note_contents, toPrint=FALSE)
+text_df$card_disambiguated_note <- sapply(text_df$TEXT, disambiguate_note_contents, toPrint=FALSE)
 gc() # garbage collection
 ```
 
 ```{r}
-head(text.df$card_disambiguated_note, 1)
+head(text_df$card_disambiguated_note, 1)
 ```
 
 ```{r}
-head(text.df, 4)
+head(text_df, 4)
 ```
 
 
 Sanity check. 
 
 ```{r}
-nrow(text.df) # expect 104 on testing data
+nrow(text_df) # expect 104 on testing data
 ```
 
 ```{r}
-names(text.df)
+names(text_df)
 ```
 
 
 Write data out to file to inspect.
 
 ```{r}
-save_csv(text.df, 'data/', 'compare_disambiguation_results.csv')
+save_csv(text_df, 'data/', 'compare_disambiguation_results.csv')
 ```
 
 
@@ -402,8 +512,8 @@ The function below performs a number of steps:
 
 ```{r}
 perform_text_preprocessing_operations <- function(columnVector, stripName=TRUE, rmStopWords = FALSE, stemResults=FALSE) {
-  # 'function to chain together various text preprocessing functions
-  # '@columnVector: a column vector of textual data to process
+  #' function to chain together various text preprocessing functions
+  #' @param columnVector: a column vector of textual data to process
   
   newVector <- columnVector
   
@@ -431,7 +541,7 @@ perform_text_preprocessing_operations <- function(columnVector, stripName=TRUE, 
 
 
 # invoke using defaults
-doc_corpus <- perform_text_preprocessing_operations(text.df$card_disambiguated_note)
+doc_corpus <- perform_text_preprocessing_operations(text_df$card_disambiguated_note)
 doc_corpus[[2]]$content # empirical sanity-check
 ```
 
@@ -441,9 +551,9 @@ The `Corpus` object from `tm` is ordered, so we can apply this back into the sub
 
 ```{r}
 add_preprocessed_text_to_df <- function(df_to_append_to, cleaned_doc_corpus) {
-  # ' function to append a doc corpus back to a data frame as a new column, return modified input data.frame
-  # '@df_to_append_to: data.frame to append new column to
-  # '@cleaned_doc_corpus: processed doc corpus object
+  #' function to append a doc corpus back to a data frame as a new column, return modified input data.frame
+  #' @param df_to_append_to: data.frame to append new column to
+  #' @param cleaned_doc_corpus: processed doc corpus object
   
   temp.df <- data.frame(text=unlist(sapply(cleaned_doc_corpus, `[`, "content")), 
     stringsAsFactors=F)
@@ -452,14 +562,14 @@ add_preprocessed_text_to_df <- function(df_to_append_to, cleaned_doc_corpus) {
   return(df_to_append_to)
 }
 
-text.df <- add_preprocessed_text_to_df(text.df, doc_corpus)
-head(text.df)
+text_df <- add_preprocessed_text_to_df(text_df, doc_corpus)
+head(text_df)
 ```
 
 We save the results to disk for empirical validation and inspection:
 
 ```{r}
-# save_csv(text.df, 'data/', 'compare_disambiguation_and_preprocessing.csv.csv')
+# save_csv(text_df, 'data/', 'compare_disambiguation_and_preprocessing.csv.csv')
 ```
 
 
@@ -469,14 +579,14 @@ For a primer, please read the [wikipedia page](https://en.wikipedia.org/wiki/Tf%
 
 ```{r}
 doc_dtm<-DocumentTermMatrix(doc_corpus)
-doc_dtm$dimnames$Docs <- as.character(text.df$STUDY_NOTE_ID) # make sure to preserve document names
+doc_dtm$dimnames$Docs <- as.character(text_df$STUDY_NOTE_ID) # make sure to preserve document names
 ```
 
 
 ```{r}
 get_shortest_document_length <- function(doc_dtm) {
-  # 'function to find the shortest document
-  # '@corpusObject
+  #' function to find the shortest document
+  #' @param corpusObject
   rowTotals <- apply(doc_dtm , 1, sum)
   print(min(rowTotals)) # the shortest document
 }
@@ -504,16 +614,16 @@ findFreqTerms(doc_dtm, lowfreq = 50) # look at terms that appear at least 25 tim
 
 ```{r}
 build_tfidf_matrix <- function(corpus, ID_vector) {
-  # 'fuction to return a new tf_idf object
-  # '@corpus: a corpus object to use to create the tf_idf mat
-  # '@ID_vector: vector of document IDs to add to tf_idf matrix
+  #' fuction to return a new tf_idf object
+  #' @param corpus: a corpus object to use to create the tf_idf mat
+  #' @param ID_vector: vector of document IDs to add to tf_idf matrix
   
   dtm.tfidf <- DocumentTermMatrix(corpus, control = list(weighting=weightTfIdf))
   dtm.tfidf$dimnames$Docs <- as.character(ID_vector)
   return(dtm.tfidf)
 }
 
-dtm.tfidf <- build_tfidf_matrix(doc_corpus, text.df$STUDY_NOTE_ID)
+dtm.tfidf <- build_tfidf_matrix(doc_corpus, text_df$STUDY_NOTE_ID)
 ```
 
 
@@ -521,8 +631,8 @@ dtm.tfidf <- build_tfidf_matrix(doc_corpus, text.df$STUDY_NOTE_ID)
 
 ```{r}
 transpose_tf_idf_mat <- function(tf_idf_mat) {
-  # ' function to pivot matrix so that it may be joined to the original matrix as new colum vectors
-  # '@tf_idf_mat: tf idf matrix to trabnsform
+  #' function to pivot matrix so that it may be joined to the original matrix as new colum vectors
+  #' @param tf_idf_mat: tf idf matrix to trabnsform
   
   dtm.tfidf_long <- tidy(tf_idf_mat, row_names=dtm.tfidf$dimnames$Docs, col_names=dtm.tfidf$dimnames$Terms)
   
@@ -541,9 +651,9 @@ dtm.tfidf_df <- transpose_tf_idf_mat(dtm.tfidf)
 
 ```{r}
 find_duplicate_columns <- function(tf_idf_dataframe) {
-  # 'function to print/remove duplicate columns
-  # '@tf_idf_dataframe: data.frame to check for duplicate columns
-  # '@remove_dupes: boolean flag. If TRUE the duplicare columns will be stripped
+  #' function to print/remove duplicate columns
+  #' @param tf_idf_dataframe: data.frame to check for duplicate columns
+  #' @param remove_dupes: boolean flag. If TRUE the duplicare columns will be stripped
   
   # duplicates <- tf_idf_dataframe[, !duplicated(colnames(tf_idf_dataframe))]
   duplicates <- colnames(tf_idf_dataframe)[duplicated(colnames(tf_idf_dataframe))]
@@ -560,7 +670,7 @@ find_duplicate_columns(dtm.tfidf_df)
 ## Add term counts back to original `data.frame` as new variables.
 
 ```{r}
-new_features_df <- merge(x = text.df,
+new_features_df <- merge(x = text_df,
                          y = dtm.tfidf_df,
                          by.x=c('STUDY_NOTE_ID'),
                          by.y=c('document_id'),
@@ -602,7 +712,7 @@ This will allow us to remove rarely occurring words and reduce the dimensionalit
 
 ## Abbreviations
 
-Detect Abbreviations using pretrqined SVM, save results to new directory.
+Detect Abbreviations using pretreined SVM, save results to new directory.
 
 ```{r}
 # run_CARD_abbrev_jar <- function(jar_path, input_dir, output_dir) {
@@ -620,6 +730,28 @@ Detect Abbreviations using pretrqined SVM, save results to new directory.
 # run_CARD_abbrev_jar(jar_path = 'CARD_dataset_tools/AbbreviationDetection_v1.1_beta.jar-02-19/AbbreviationDetection_v1.1_beta.jar',
 #                                 input_dir = 'text_files_for_CARD/',
 #                                 output_dir = 'abbreviation_output_CARD/')
+```
+
+
+Running CARD via classpath (not via jar)
+
+```{r}
+# execute_card <- function(row) {
+#   # 'function to generate card output based on a clinical note piped from stdin
+#   # '@row: a row in a dataframe conatined a char string that is a clinical note
+#   clinical_note_string <- as.String(row)
+#   command <- "java -classpath ./bin MetaMapWrapper.SenseDisambiguationText"
+#   
+#   detected_abbreviations <- system(command,
+#                    input = clinical_note_string,
+#                    ignore.stdout=FALSE,
+#                    ignore.stderr=FALSE,
+#                    wait = FALSE,
+#                    intern = TRUE)
+#   
+#   result <- gsub("[\r\n]", "", detected_abbreviations)
+#   return(result) 
+# }
 ```
 
 ## Sense Detection
@@ -660,7 +792,7 @@ Saving dataframes to disk
 # 
 # }
 # 
-# save_whole_df_to_card_file(text.df, 'card_input.csv')
+# save_whole_df_to_card_file(text_df, 'card_input.csv')
 ```
 
 
@@ -674,7 +806,7 @@ Saving dataframes to disk
 #   # @param df A data.frame object to be saved, each row will be saved to unique file
 # 
 #   for (i in 1:nrow(df)) {
-#     clincial_note <- df[i,'DS_PreprocessedAnonymized_Text'] #  variable for clinical note value
+#     clincial_note <- df[i,'TEXT'] #  variable for clinical note value
 #     # creates a unique ID string to be used as filename
 #     card_input_dir = 'text_files_for_CARD/'
 #     id_string <- paste(df[i,'STUDY_PAT_ID'], df[i,'STUDY_ENC_ID'], df[i,'STUDY_NOTE_ID'], sep="-")
@@ -689,7 +821,7 @@ Saving dataframes to disk
 #   }
 # }
 # 
-# save_each_record_to_card_file(text.df)
+# save_each_record_to_card_file(text_df)
 ```
 
 

@@ -56,6 +56,7 @@ library(dplyr)
 library(reshape2)
 library(knitr)
 library(kableExtra)
+library(stringi)
 
 ## another text_processing library that may be worth considering, spaCy is extremely powerful
 ## https://github.com/quanteda/spacyr
@@ -76,7 +77,7 @@ sessionInfo()
 sapply(c('repr', 'IRdisplay', 'IRkernel'), function(p) paste(packageVersion(p)))
 ```
 
-# Source Custom Functions
+## Source Custom Functions
 Source the `load_and_convert_functions.R` from the local file.
 
 ```{r}
@@ -91,9 +92,8 @@ data_dictionary_path <- 'data/Data_Dictionary.xlsx'
 header <- readxl::read_excel(data_dictionary_path, sheet = "Notes", range="A1:B4", trim_ws = TRUE)
 
 knitr::kable(header) %>%
-  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+  kableExtra::kable_styling(bootstrap_options = c("striped", "condensed"), full_width = F)
 ```
-
 
 
 
@@ -106,9 +106,8 @@ enc_data_dictionary <- readxl::read_excel(data_dictionary_path,
                               trim_ws = TRUE)
 
 knitr::kable(enc_data_dictionary) %>%
-  kableExtra::kable_styling(bootstrap_options = "striped", full_width = F)
+  kableExtra::kable_styling(bootstrap_options = c("striped", "condensed"), full_width = F)
 ```
-
 
 
 # Load data
@@ -137,6 +136,7 @@ notes_path <- 'data/full_set/Notes.dsv'
 # notes_path <- "data/full_set/TEST_Notes.dsv"
 ```
 
+### Investigating File Irregularities
 
 **NOTE:** The parameters on this function affect the total number of rows in the resulting `data.frame`. The following note is from the data office:
 
@@ -149,18 +149,30 @@ wc -l "data/full_set/Notes.dsv"
 Something breaks down in the middle of this file. At the beginnning, each record is on it's own line, but at the end this is no longer the case. 
 
 ```{bash}
-head -n 2 "data/full_set/Notes.dsv"
-```
-
-```{bash}
-tail -n 10 "data/full_set/Notes.dsv"
+head -n 3 "data/full_set/Notes.dsv"
 ```
 
 After some manual searching, we can see that this is the first section of the file that breaks. Lines 178791-178793 should be a single record (line), but they are not.
 
 ```{bash}
-sed -n "178791,178794p" "data/full_set/Notes.dsv"
+sed -n "178790,178794p" "data/full_set/Notes.dsv"
 ```
+
+```{bash}
+sed -n "178793,178805p" "data/full_set/Notes.dsv"
+```
+
+It's bad further on as well.
+
+```{bash}
+sed -n "278793,278805p" "data/full_set/Notes.dsv"
+```
+
+```{bash}
+tail -n 200 "data/full_set/Notes.dsv"
+```
+
+
 
 ```{bash}
 head -n 178789 "data/full_set/Notes.dsv" > "data/full_set/TEST_Notes.dsv"
@@ -179,7 +191,7 @@ raw_data_df <- read_notes_dsv(filepath = notes_path)
 head(raw_data_df)
 ```
 
-## Sampling from Full Data Set
+### Sampling from Full Data Set
 Randomly sample from the full set to speed up development while maximizing exposure to corner cases.
 
 ```{r}
@@ -188,9 +200,7 @@ head(sampled_df)
 ```
 
 
-
-
-## Data Type Transformations
+### Data Type Transformations
 
 ```{r}
 names(sampled_df)
@@ -214,8 +224,15 @@ transformed_df <- transform(sampled_df,
 str(transformed_df)
 ```
 
+### Force character encoding
 
-# Subset Text Field
+```{r}
+transformed_df$TEXT <- stri_encode(transformed_df$TEXT, "", "UTF-8")
+```
+
+
+
+### Subset Text Field
 Subset the `data.frame`. We retain the text notes and ID fields for mapping back to the data.frame.
 
 ```{r}
@@ -229,67 +246,10 @@ subset_dataframe <- function(my_dataframe, column_vector) {
 
 # list of columns to process
 cols = c('STUDY_PAT_ID', 'STUDY_ENC_ID', 'STUDY_NOTE_ID','TEXT')
-text_df <- subset_dataframe(sampled_df, cols) # note, working with sampled DF
+text_df <- subset_dataframe(transformed_df, cols) # note, working with sampled DF
 
 head(text_df , 2)
 ```
-
-# Term Frequencies
-
-Below we define a function to calculate raw counts and relative frequecies from a given column of textual data. 
-
-```{r}
-get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
-  #' function to return a new data.frame w/ term frequencies from a specified column
-  #' @param df: data.frame containing column to use
-  #' @param columnName: colName of the column to use; expects a string value not index position
-  tmp_corpus <- VCorpus(VectorSource(df[, columnName]))
-  tdm <- as.matrix(TermDocumentMatrix(tmp_corpus))
-  frequency_df <- data.frame(token = rownames(tdm), 
-                      count = rowSums(tdm), 
-                      row.names = NULL)
-  
-  total_count <- sum(frequency_df$count)
-  frequency_df$normalized_frequency <- sapply(frequency_df$count, function(x) x/total_count)
-  
-  
-  if (!sortByHighFQ) {
-    return(frequency_df)
-  } else {
-    # sort output by most frequent tokens
-    frequency_df <- frequency_df[with(frequency_df,order(-count)),]  
-  }
-  return(frequency_df)
-}
-
-raw_frequencies <- get_token_frequecy_from_column(text_df, 'TEXT', sortByHighFQ=TRUE)
-head(raw_frequencies, 50)
-```
-
-If we need to save a relative frequency file for CARD for any reason, here is a function to do it:
-
-```{r}
-create_term_frequency_file_for_card <- function(term_frequency_df) {
-  #' function to save a file with term frequencies in CARD format:
-  #' each line formated as 'word \t normalized_frequency'.(Normalized frequency = (word frequency)/(Total # of words))
-  #' @param term_frequency_df: data.frame containing word frequency information
-  today_date = format(Sys.time(), "%m%d%Y")
-  filename = "word_frequencies.csv" # note, this needs to be changed
-  save_path = paste("data/", today_date, filename , sep="")
-
-  write.csv(term_frequency_df[, c('token', 'normalized_frequency')], 
-            file=save_path, 
-            sep = "\t", 
-            row.names=FALSE,
-            col.names=FALSE)
-  
-  print(paste('File:', save_path, 'written successfully!'))
-}
-  
-# # uncomment to create file
-# create_term_frequency_file_for_card(raw_frequencies)
-```
-
 
 # CARD Abbreviation Disambiguiation
 
@@ -301,12 +261,6 @@ text_df[1,'STUDY_NOTE_ID']
 text_df[1, 'TEXT']
 ```
 
-
-# Helper functions (subroutines)
-These functions are used during the disambiguation process. 
-
-** Note: ** using `system` presuposes that the system is compatible with the system listed in `sessionInfo()`. It should be noted that this command behaves differently on different OS. See docs for more information: [system documentation](https://stat.ethz.ch/R-manual/R-devel/library/base/html/system.html). 
-
 ## CARD Resource Files
 These files are inputs for the `.jar` invocation of CARD.
 
@@ -317,6 +271,10 @@ profile_dir <- "code/card_inputs/profile/"
 cui_map <- "code/card_inputs/VABBR_DS_beta.txt.add_semantic_type"
 ```
 
+## Helper functions (subroutines)
+These functions are used during the disambiguation process. 
+
+** Note: ** using `system` presuposes that the system is compatible with the system listed in `sessionInfo()`. It should be noted that this command behaves differently on different OS. See docs for more information: [system documentation](https://stat.ethz.ch/R-manual/R-devel/library/base/html/system.html). 
 
 
 ```{r}
@@ -392,14 +350,6 @@ perform_substitions <- function(sentence, abbreviation_list, toPrint=TRUE) {
 We pipe each record (clinical note) to a rewritten `MetaMapWrapper.SenseDisambiguationText` function. We execute the CARD java `.class` file via the `system()` command and, which expects a bash shell. Below is the flow control function including post-abbreviation processing. Here we manage the CARD output and perform disambiguation, outputting a new string with all sentences. Saved to new column of `data.frame`.
 
 ```{r}
-### IMPORTANT NOTE: this function REQUIRES being run from the given path as wd, or else CARD can't find the classes on classpath
-# set execution path for this chunk
-
-# exe_path <- 'TightClusteringSenseDetection_v2' # required to run 'MetaMapWrapper.SenseDisambiguationText'
-# setwd(exe_path) 
-# getwd()
-
-
 disambiguate_note_contents <- function(row, toPrint=TRUE) {
   #' function to perform substitions for CARD abbreviation disambiguation
   #' @param row: row containing clinical note to disambiguate
@@ -482,7 +432,7 @@ head(text_df, 4)
 Sanity check. 
 
 ```{r}
-nrow(text_df) # expect 104 on testing data
+nrow(text_df) # expect 104 on testing data, 1000 on sampled data
 ```
 
 ```{r}
@@ -493,11 +443,13 @@ names(text_df)
 Write data out to file to inspect.
 
 ```{r}
-save_csv(text_df, 'data/', 'compare_disambiguation_results.csv')
+# save_csv(text_df, 'data/', 'compare_disambiguation_results.csv')
 ```
 
 
-# Text Mining Pre-processing
+# Text Mining
+
+## Data Pre-processing
 This section contains various transformation operations on the subsetted `data.frame`. The ultimate product is a new `data.frame` with increased dimensionality. The [DSPA Textbook (Chapter 19) provides additional TM/NLP rotocols](http://www.socr.umich.edu/people/dinov/courses/DSPA_notes/19_NLP_TextMining.html).
 
 The function below performs a number of steps:
@@ -511,41 +463,45 @@ The function below performs a number of steps:
 
 
 ```{r}
-perform_text_preprocessing_operations <- function(columnVector, stripName=TRUE, rmStopWords = FALSE, stemResults=FALSE) {
+perform_text_preprocessing_operations <- function(columnVector, 
+                                                  rmStopWords = FALSE, 
+                                                  stemResults=FALSE) {
   #' function to chain together various text preprocessing functions
   #' @param columnVector: a column vector of textual data to process
+  #' @param rmStopWords: boolean flag to determine if English stopwords should be removed
+  #' @param stemResults: boolean flag to determine if words should be stemmed
   
   newVector <- columnVector
-  
-  if (stripName) {
-    # strip de-identifying derivitives
-    newVector <- gsub("[|NAME|]", "", columnVector) 
-  } else{}
-  
-  doc_corpus <- VCorpus(VectorSource(newVector)) # create corpus opbject
-  doc_corpus<-tm_map(doc_corpus, content_transformer(tolower)) # lowercase all, this makes disambiguation easier
-  doc_corpus<-tm_map(doc_corpus, removePunctuation) # remove punctuation characters
-  doc_corpus<-tm_map(doc_corpus, removeNumbers) # remove numbers
+  doc_corpus <- tm::VCorpus(tm::VectorSource(newVector)) # create corpus opbject
+  doc_corpus <- tm::tm_map(doc_corpus, tm::content_transformer(tolower)) # lowercase all
+  doc_corpus <- tm::tm_map(doc_corpus, tm::removePunctuation) # remove punctuation characters
+  doc_corpus <- tm::tm_map(doc_corpus, tm::removeNumbers) # remove numbers
   
   if (rmStopWords) {
-    doc_corpus<-tm_map(doc_corpus, removeWords, stopwords("english"))
+    doc_corpus<-tm_map(doc_corpus, tm::removeWords, stopwords("english"))
   }
   
   if (stemResults) {
-    doc_corpus<-tm_map(doc_corpus, stemDocument)
+    doc_corpus<-tm_map(doc_corpus, tm::stemDocument)
   }
   
-  doc_corpus <- tm_map(doc_corpus, stripWhitespace) # clean up whitespace
+  doc_corpus <- tm_map(doc_corpus, tm::stripWhitespace) # clean up whitespace
   return(doc_corpus)
 }
 
 
 # invoke using defaults
-doc_corpus <- perform_text_preprocessing_operations(text_df$card_disambiguated_note)
+doc_corpus <- perform_text_preprocessing_operations(text_df$card_disambiguated_note, 
+                                                    rmStopWords = TRUE,
+                                                    stemResults = TRUE)
+```
+
+
+```{r}
 doc_corpus[[2]]$content # empirical sanity-check
 ```
 
-## Add clean text back to `data.frame`
+Add clean text back to `data.frame`
 
 The `Corpus` object from `tm` is ordered, so we can apply this back into the subsetted `data.frame`.
 
@@ -573,12 +529,12 @@ We save the results to disk for empirical validation and inspection:
 ```
 
 
-# Term Frequency - Inverse Document Frequency (TF-IDF)
+## TF-IDF
 
 For a primer, please read the [wikipedia page](https://en.wikipedia.org/wiki/Tf%E2%80%93idf). Note the high sparsity.
 
 ```{r}
-doc_dtm<-DocumentTermMatrix(doc_corpus)
+doc_dtm <- tm::DocumentTermMatrix(doc_corpus)
 doc_dtm$dimnames$Docs <- as.character(text_df$STUDY_NOTE_ID) # make sure to preserve document names
 ```
 
@@ -594,40 +550,51 @@ get_shortest_document_length <- function(doc_dtm) {
 get_shortest_document_length(doc_dtm)
 ```
 
-## Quick Descriptive Peek
-
-Here we look in the document term matrix for positive correlation with the word 'memory'. See anything interesting?
-
 ```{r}
-findAssocs(doc_dtm, "memory", corlimit = 0.75)
-```
-
-```{r}
-findAssocs(doc_dtm, "dementia", corlimit = 0.5)
-```
-
-```{r}
-findFreqTerms(doc_dtm, lowfreq = 50) # look at terms that appear at least 25 times
-```
-
-## Create tf-idf object 
-
-```{r}
-build_tfidf_matrix <- function(corpus, ID_vector) {
-  #' fuction to return a new tf_idf object
-  #' @param corpus: a corpus object to use to create the tf_idf mat
-  #' @param ID_vector: vector of document IDs to add to tf_idf matrix
+get_dictionary_from_file<- function(filepath){
+  #' function to return a vector of words to be used in a TF-IDF matrix
+  #' @param filepath: path of file containinf
   
-  dtm.tfidf <- DocumentTermMatrix(corpus, control = list(weighting=weightTfIdf))
-  dtm.tfidf$dimnames$Docs <- as.character(ID_vector)
-  return(dtm.tfidf)
+  #' @NOTE: stub
+  
 }
 
-dtm.tfidf <- build_tfidf_matrix(doc_corpus, text_df$STUDY_NOTE_ID)
 ```
 
 
-## Convert tf_idf object to `data.frame` and pivot so that each term is a column. Important reference: [questions/8161836](https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe).
+```{r}
+build_tfidf_matrix <- function(corpus, dictionary, ID_vector) {
+  #' fuction to return a new tf_idf object
+  #' @param corpus: a corpus object to use to create the tf_idf mat
+  #' @param dictionary: a corpus of words to use instead of those passed from the corpus
+  #' @param ID_vector: vector of document IDs to add to tf_idf matrix
+  #' @param ID_vector: vector of document IDs to add to tf_idf matrix
+  
+  if (missing(dictionary)) {
+    dtm.tfidf <- tm::DocumentTermMatrix(corpus, control = list(weighting=weightTfIdf))
+    dtm.tfidf$dimnames$Docs <- as.character(ID_vector)
+    return(dtm.tfidf)
+  } else {
+   print(paste0('NEEED! Dictionary procedure. ', dictionary)) 
+  }
+}
+
+dtm.tfidf <- build_tfidf_matrix(corpus = doc_corpus, ID_vector = text_df$STUDY_NOTE_ID)
+
+# 
+# build_tfidf_matrix(corpus = doc_corpus,
+#                                 dictionary = 'test',
+#                                 ID_vector = text_df$STUDY_NOTE_ID)
+```
+
+Remove sparse terms, more bang for our buck.
+
+```{r}
+dtm.tfidf <- tm::removeSparseTerms(dtm.tfidf, sparse = .95)
+```
+
+
+Convert tf_idf object to `data.frame` and pivot so that each term is a column. Important reference: [questions/8161836](https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe).
 
 ```{r}
 transpose_tf_idf_mat <- function(tf_idf_mat) {
@@ -667,7 +634,7 @@ find_duplicate_columns <- function(tf_idf_dataframe) {
 find_duplicate_columns(dtm.tfidf_df)
 ```
 
-## Add term counts back to original `data.frame` as new variables.
+Add term counts back to original `data.frame` as new variables.
 
 ```{r}
 new_features_df <- merge(x = text_df,
@@ -684,16 +651,104 @@ Sanity checks
 ncol(new_features_df) # expect many
 ```
 
-```{r}
-nrow(new_features_df) # expect 104
-```
 
+```{r}
+nrow(new_features_df) # expect 1000
+```
 
 Save the resulting file (note that there are other methods for doing this).
 
 ```{r}
-save_csv(new_features_df, 'data/', 'new_feature_extraction.csv')
+# save_csv(new_features_df, 'data/', 'new_feature_extraction.csv')
 ```
+
+# Descriptive Statistics
+
+
+
+
+Sample a few terms:
+
+```{r}
+sample(names(new_features_df[,7:length(names(new_features_df))]), 100)
+```
+
+
+## Inspecting the TF_IDF matrix
+
+```{r}
+tm::findFreqTerms(dtm.tfidf, lowfreq = 3)
+```
+
+```{r}
+tm::findAssocs(dtm.tfidf, "symptom", corlimit = 0.2)
+```
+
+```{r}
+tm::findAssocs(dtm.tfidf, "dementia", corlimit = 0.1)
+```
+
+```{r}
+tm::findAssocs(dtm.tfidf, "memori", corlimit = 0.1)
+```
+
+
+## Term Frequencies
+
+Below we define a function to calculate raw counts and relative frequecies from a given column of textual data. 
+
+```{r}
+get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
+  #' function to return a new data.frame w/ term frequencies from a specified column
+  #' @param df: data.frame containing column to use
+  #' @param columnName: colName of the column to use; expects a string value not index position
+  tmp_corpus <- VCorpus(VectorSource(df[, columnName]))
+  tdm <- as.matrix(TermDocumentMatrix(tmp_corpus))
+  frequency_df <- data.frame(token = rownames(tdm), 
+                      count = rowSums(tdm), 
+                      row.names = NULL)
+  
+  total_count <- sum(frequency_df$count)
+  frequency_df$normalized_frequency <- sapply(frequency_df$count, function(x) x/total_count)
+  
+  
+  if (!sortByHighFQ) {
+    return(frequency_df)
+  } else {
+    # sort output by most frequent tokens
+    frequency_df <- frequency_df[with(frequency_df,order(-count)),]  
+  }
+  return(frequency_df)
+}
+
+raw_frequencies <- get_token_frequecy_from_column(text_df, 'TEXT', sortByHighFQ=TRUE)
+head(raw_frequencies, 50)
+```
+
+If we need to save a relative frequency file for CARD for any reason, here is a function to do it:
+
+```{r}
+create_term_frequency_file_for_card <- function(term_frequency_df) {
+  #' function to save a file with term frequencies in CARD format:
+  #' each line formated as 'word \t normalized_frequency'.(Normalized frequency = (word frequency)/(Total # of words))
+  #' @param term_frequency_df: data.frame containing word frequency information
+  today_date = format(Sys.time(), "%m%d%Y")
+  filename = "word_frequencies.csv" # note, this needs to be changed
+  save_path = paste("data/", today_date, filename , sep="")
+
+  write.csv(term_frequency_df[, c('token', 'normalized_frequency')], 
+            file=save_path, 
+            sep = "\t", 
+            row.names=FALSE,
+            col.names=FALSE)
+  
+  print(paste('File:', save_path, 'written successfully!'))
+}
+  
+# # uncomment to create file
+# create_term_frequency_file_for_card(raw_frequencies)
+```
+
 
 
 ## Remove Sparse Terms
@@ -757,6 +812,14 @@ Running CARD via classpath (not via jar)
 ## Sense Detection
 
 ```{r}
+### IMPORTANT NOTE: this function REQUIRES being run from the given path as wd, or else CARD can't find the classes on classpath
+# set execution path for this chunk
+
+# exe_path <- 'TightClusteringSenseDetection_v2' # required to run 'MetaMapWrapper.SenseDisambiguationText'
+# setwd(exe_path) 
+# getwd()
+
+
 # run_CARD_sense_jar <- function(jar_path, lang_file, input_dir, output_dir) {
 #   # function to run CARD abbreviation detection
 #   # @param jar_path: path to the executable .jar file

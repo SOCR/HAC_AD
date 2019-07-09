@@ -48,6 +48,8 @@ This project assumes that:
 
 ```{r}
 library(tidyverse)
+library(tidytext)
+library(topicmodels)
 library(tm)
 library(SnowballC)
 library(tidytext)
@@ -110,6 +112,7 @@ knitr::kable(enc_data_dictionary) %>%
 ```
 
 
+
 # Load data
 Load the data from the source file. Assumes file in `.xlsx` format. 
 
@@ -122,7 +125,7 @@ getwd() # make sure you're in the right spot! Expect "........./HAC_AD"
 
 This assumes that there is a separate directory for the data file. **Watch out for paths.**
 ```{r}
-# relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" # osx
+relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" # osx
 # relative_sample_path <- "../../local_data/DS_PreprocessedAnonymized_Text.xlsx" # win
 # raw_data_df <-  read_xlsx_from_path(filepath = relative_sample_path)
 ```
@@ -184,19 +187,29 @@ Temporarily set the path to a testing file (the records suspected to be correct.
 notes_path <- "data/full_set/TEST_Notes.dsv"
 ```
 
-
+Read the full data 
 ```{r}
-source('code/load_and_convert_functions.R')
-raw_data_df <- read_notes_dsv(filepath = notes_path)
-head(raw_data_df)
+# source('code/load_and_convert_functions.R')
+# raw_data_df <- read_notes_dsv(filepath = notes_path)
+# head(raw_data_df)
 ```
+
+Reading sample data (100 de-id cases).
+```{r}
+raw_data_df <- read_xlsx_from_path(relative_sample_path)
+names(raw_data_df)[names(raw_data_df) == 'DS_PreprocessedAnonymized_Text'] <- 'TEXT' # make names consistent 
+raw_data_df <- raw_data_df[1:(length(raw_data_df)-1)] # drop last column
+sampled_df <- raw_data_df # rename for consistency
+head(sampled_df)
+```
+
 
 ### Sampling from Full Data Set
 Randomly sample from the full set to speed up development while maximizing exposure to corner cases.
 
 ```{r}
-sampled_df <- raw_data_df[sample(nrow(raw_data_df), 1000), ]
-head(sampled_df)
+# sampled_df <- raw_data_df[sample(nrow(raw_data_df), 1000), ]
+# head(sampled_df)
 ```
 
 
@@ -345,7 +358,7 @@ perform_substitions <- function(sentence, abbreviation_list, toPrint=TRUE) {
 }
 ```
 
-## Disambiguiation
+## Disambiguation
 
 We pipe each record (clinical note) to a rewritten `MetaMapWrapper.SenseDisambiguationText` function. We execute the CARD java `.class` file via the `system()` command and, which expects a bash shell. Below is the flow control function including post-abbreviation processing. Here we manage the CARD output and perform disambiguation, outputting a new string with all sentences. Saved to new column of `data.frame`.
 
@@ -435,10 +448,6 @@ Sanity check.
 nrow(text_df) # expect 104 on testing data, 1000 on sampled data
 ```
 
-```{r}
-names(text_df)
-```
-
 
 Write data out to file to inspect.
 
@@ -465,7 +474,7 @@ The function below performs a number of steps:
 ```{r}
 perform_text_preprocessing_operations <- function(columnVector, 
                                                   rmStopWords = FALSE, 
-                                                  stemResults=FALSE) {
+                                                  stemResults = FALSE) {
   #' function to chain together various text preprocessing functions
   #' @param columnVector: a column vector of textual data to process
   #' @param rmStopWords: boolean flag to determine if English stopwords should be removed
@@ -492,8 +501,7 @@ perform_text_preprocessing_operations <- function(columnVector,
 
 # invoke using defaults
 doc_corpus <- perform_text_preprocessing_operations(text_df$card_disambiguated_note, 
-                                                    rmStopWords = TRUE,
-                                                    stemResults = TRUE)
+                                                    rmStopWords = TRUE)
 ```
 
 
@@ -553,10 +561,8 @@ get_shortest_document_length(doc_dtm)
 ```{r}
 get_dictionary_from_file<- function(filepath){
   #' function to return a vector of words to be used in a TF-IDF matrix
-  #' @param filepath: path of file containinf
-  
+  #' @param filepath: path of file containing lexical resources
   #' @NOTE: stub
-  
 }
 
 ```
@@ -664,8 +670,31 @@ Save the resulting file (note that there are other methods for doing this).
 
 # Descriptive Statistics
 
+## N-Gram Analysis
+
+```{r}
+cols = c('STUDY_NOTE_ID','processed_text')
+tmp_df <- subset_dataframe(text_df, cols) # note, working with sampled df
+
+notes_ngrams <- tidytext::unnest_tokens(tmp_df, ngram, 'processed_text', token = "ngrams", n = 3)
+
+head(notes_ngrams)
+```
+
+```{r}
+notes_ngrams %>%
+  count(ngram, sort = TRUE)
+```
 
 
+```{r}
+ngram_tf_idf <- notes_ngrams %>%
+  count(STUDY_NOTE_ID, ngram) %>%
+  bind_tf_idf(ngram, STUDY_NOTE_ID, n) %>%
+  arrange(desc(tf_idf))
+
+ngram_tf_idf
+```
 
 Sample a few terms:
 
@@ -677,7 +706,7 @@ sample(names(new_features_df[,7:length(names(new_features_df))]), 100)
 ## Inspecting the TF_IDF matrix
 
 ```{r}
-tm::findFreqTerms(dtm.tfidf, lowfreq = 3)
+tm::findFreqTerms(dtm.tfidf, lowfreq = 1)
 ```
 
 ```{r}
@@ -692,10 +721,14 @@ tm::findAssocs(dtm.tfidf, "dementia", corlimit = 0.1)
 tm::findAssocs(dtm.tfidf, "memori", corlimit = 0.1)
 ```
 
-
 ## Term Frequencies
 
 Below we define a function to calculate raw counts and relative frequecies from a given column of textual data. 
+
+```{r}
+names(text_df)
+```
+
 
 ```{r}
 get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
@@ -721,7 +754,7 @@ get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
   return(frequency_df)
 }
 
-raw_frequencies <- get_token_frequecy_from_column(text_df, 'TEXT', sortByHighFQ=TRUE)
+raw_frequencies <- get_token_frequecy_from_column(text_df, 'processed_text', sortByHighFQ=TRUE)
 head(raw_frequencies, 50)
 ```
 
@@ -748,7 +781,6 @@ create_term_frequency_file_for_card <- function(term_frequency_df) {
 # # uncomment to create file
 # create_term_frequency_file_for_card(raw_frequencies)
 ```
-
 
 
 ## Remove Sparse Terms

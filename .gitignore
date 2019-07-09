@@ -11,8 +11,8 @@
 *.rds
 
 # ignore exceptions
-!code/card_resources/word.txt
-!code/card_resources/abbr.txt
+!code/card_inputs/word.txt
+!code/card_inputs/abbr.txt
 
 # prevent knitr artifacts from commit
 *.pdf

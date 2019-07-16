@@ -3,9 +3,6 @@ title: "Health Analytics Collaboratory (HAC) - University of Michigan"
 author: "<h3>Ivo Dinov, Cooper Stansbury, Haiyin Liu, Bingxin Chen</h3>"
 date: "`r format(Sys.time(), '%B %Y')`"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '2'
   html_document:
     highlight: tango
     includes:
@@ -17,6 +14,12 @@ output:
     toc_float:
       collapsed: no
       smooth_scroll: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  word_document:
+    toc: yes
+    toc_depth: '2'
 tags:
 - HAC
 - DSPA
@@ -59,6 +62,9 @@ library(reshape2)
 library(knitr)
 library(kableExtra)
 library(stringi)
+library(formattable)
+library(wordcloud2)
+library(RColorBrewer)
 
 ## another text_processing library that may be worth considering, spaCy is extremely powerful
 ## https://github.com/quanteda/spacyr
@@ -98,7 +104,6 @@ knitr::kable(header) %>%
 ```
 
 
-
 ```{r, echo=FALSE, results='asis'}
 enc_data_dictionary <- readxl::read_excel(data_dictionary_path, 
                               sheet = "Notes", 
@@ -135,7 +140,7 @@ relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" # osx
 **WARNING:** the following file is magnitudes larger than the others and requires a long time (and a lot of memory) to load. Proceed with caution.
 
 ```{r}
-notes_path <- 'data/full_set/Notes.dsv'
+# notes_path <- 'data/full_set/Notes.dsv'
 # notes_path <- "data/full_set/TEST_Notes.dsv"
 ```
 
@@ -146,49 +151,47 @@ notes_path <- 'data/full_set/Notes.dsv'
   _"The text fields have been cleaned up so that carriage return/line feed and tab characters have been converted into a space..... I noticed that a few slipped through, however,      so that you will occasionally see two spaces together."_
 
 ```{bash}
-wc -l "data/full_set/Notes.dsv"
+# wc -l "data/full_set/Notes.dsv"
 ```
 
 Something breaks down in the middle of this file. At the beginnning, each record is on it's own line, but at the end this is no longer the case. 
 
 ```{bash}
-head -n 3 "data/full_set/Notes.dsv"
+# head -n 3 "data/full_set/Notes.dsv"
 ```
 
 After some manual searching, we can see that this is the first section of the file that breaks. Lines 178791-178793 should be a single record (line), but they are not.
 
 ```{bash}
-sed -n "178790,178794p" "data/full_set/Notes.dsv"
+# sed -n "178790,178794p" "data/full_set/Notes.dsv"
 ```
 
 ```{bash}
-sed -n "178793,178805p" "data/full_set/Notes.dsv"
+# sed -n "178793,178805p" "data/full_set/Notes.dsv"
 ```
 
 It's bad further on as well.
 
 ```{bash}
-sed -n "278793,278805p" "data/full_set/Notes.dsv"
+# sed -n "278793,278805p" "data/full_set/Notes.dsv"
 ```
 
 ```{bash}
-tail -n 200 "data/full_set/Notes.dsv"
+# tail -n 200 "data/full_set/Notes.dsv"
 ```
-
 
 
 ```{bash}
-head -n 178789 "data/full_set/Notes.dsv" > "data/full_set/TEST_Notes.dsv"
+# head -n 178789 "data/full_set/Notes.dsv" > "data/full_set/TEST_Notes.dsv"
 ```
 
-Temporarily set the path to a testing file (the records suspected to be correct...)
-
 ```{r}
-notes_path <- "data/full_set/TEST_Notes.dsv"
+# Temporarily set the path to a testing file (the records suspected to be correct...)
+# notes_path <- "data/full_set/TEST_Notes.dsv"
 ```
 
-Read the full data 
 ```{r}
+# Read the full data 
 # source('code/load_and_convert_functions.R')
 # raw_data_df <- read_notes_dsv(filepath = notes_path)
 # head(raw_data_df)
@@ -200,7 +203,11 @@ raw_data_df <- read_xlsx_from_path(relative_sample_path)
 names(raw_data_df)[names(raw_data_df) == 'DS_PreprocessedAnonymized_Text'] <- 'TEXT' # make names consistent 
 raw_data_df <- raw_data_df[1:(length(raw_data_df)-1)] # drop last column
 sampled_df <- raw_data_df # rename for consistency
-head(sampled_df)
+# head(sampled_df)
+```
+
+```{r}
+names(sampled_df)
 ```
 
 
@@ -241,28 +248,10 @@ str(transformed_df)
 
 ```{r}
 transformed_df$TEXT <- stri_encode(transformed_df$TEXT, "", "UTF-8")
+text_df <- transformed_df # rename for consistency
+# head(text_df , 2)
 ```
 
-
-
-### Subset Text Field
-Subset the `data.frame`. We retain the text notes and ID fields for mapping back to the data.frame.
-
-```{r}
-subset_dataframe <- function(my_dataframe, column_vector) {
-  #' function to subset a dataframe based on list of columns, returns new data.frame
-  #' @param my_dataframe: a data.frame from which to derive the subset
-  #' @param column_vector: list of strings containing columns to included in new data.frame
-  subset.df <- subset(my_dataframe, select=column_vector)
-  return(subset.df)
-}
-
-# list of columns to process
-cols = c('STUDY_PAT_ID', 'STUDY_ENC_ID', 'STUDY_NOTE_ID','TEXT')
-text_df <- subset_dataframe(transformed_df, cols) # note, working with sampled DF
-
-head(text_df , 2)
-```
 
 # CARD Abbreviation Disambiguiation
 
@@ -438,7 +427,7 @@ head(text_df$card_disambiguated_note, 1)
 ```
 
 ```{r}
-head(text_df, 4)
+# head(text_df, 4)
 ```
 
 
@@ -461,16 +450,39 @@ Write data out to file to inspect.
 ## Data Pre-processing
 This section contains various transformation operations on the subsetted `data.frame`. The ultimate product is a new `data.frame` with increased dimensionality. The [DSPA Textbook (Chapter 19) provides additional TM/NLP rotocols](http://www.socr.umich.edu/people/dinov/courses/DSPA_notes/19_NLP_TextMining.html).
 
-The function below performs a number of steps:
+
+First we reaplce common contractions with their expanded forms. 
+```{r}
+fix_contractions <- function(doc){
+  #' function adapted from 'https://www.datacamp.com/community/tutorials/R-nlp-machine-learning' to 
+  #' replace common contractions 
+  #' @param doc: input text field
+  doc <- gsub("won't", "will not", doc)
+  doc <- gsub("can't", "can not", doc)
+  doc <- gsub("n't", " not", doc)
+  doc <- gsub("'ll", " will", doc)
+  doc <- gsub("'re", " are", doc)
+  doc <- gsub("'ve", " have", doc)
+  doc <- gsub("'m", " am", doc)
+  doc <- gsub("'d", " would", doc)
+  return(doc)
+}
+
+
+text_df$fixed_contractions <- sapply(text_df$card_disambiguated_note, fix_contractions)
+```
+
+
+This function performs a number of standard best-practice text preprocessing steps:
 
   - Load column vector containing text notes into library `tm` corpus object. Important to note that we create a new object, leaving the 'raw text notes' untouched during analysis. Importantly, here is the [documentation](https://www.rdocumentation.org/packages/tm/versions/0.7-6/topics/Corpus) for a corpus object. 
-  - We remove punctuation characters and numbers and make all characters lowercase. **NOTE:** Numbers will be important for later stages of the analysis (for example, for extracting dosage information). These operations will need to be performed on the original text data.
+  - Remove punctuation characters and numbers and make all characters lowercase. **NOTE:** Numbers will be important for later stages of the analysis (for example, for extracting dosage information). These operations will need to be performed on the original text data.
   - `content_transformer(tolower)` responds to an update in `tm`. See: [/questions/24771165](https://stackoverflow.com/questions/24771165/r-project-no-applicable-method-for-meta-applied-to-an-object-of-class-charact).
-  - We can remove common English language words from the analysis. **Note on removing stopwords:**This is an important step to revisit, as many of these words may end up being quite useful.
-  - We can reduce each word to its 'stem,' or 'root.' See the [wikipedia page](https://en.wikipedia.org/wiki/Word_stem) for more information.
-  - We tidy-up whitespace characters
-
-
+  - Remove common English language words from the analysis. **Note on removing stopwords:**This is an important step to revisit, as many of these words may end up being quite useful.
+  - Reduce each word to its 'stem,' or 'root.' See the [wikipedia page](https://en.wikipedia.org/wiki/Word_stem) for more information.
+  - Tidy-up whitespace characters
+  
+  
 ```{r}
 perform_text_preprocessing_operations <- function(columnVector, 
                                                   rmStopWords = FALSE, 
@@ -500,18 +512,17 @@ perform_text_preprocessing_operations <- function(columnVector,
 
 
 # invoke using defaults
-doc_corpus <- perform_text_preprocessing_operations(text_df$card_disambiguated_note, 
+doc_corpus <- perform_text_preprocessing_operations(text_df$fixed_contractions, 
                                                     rmStopWords = TRUE)
 ```
 
+An empirical sanity-check to see what the precossed text looks like:
 
 ```{r}
-doc_corpus[[2]]$content # empirical sanity-check
+doc_corpus[[2]]$content 
 ```
 
-Add clean text back to `data.frame`
-
-The `Corpus` object from `tm` is ordered, so we can apply this back into the subsetted `data.frame`.
+Add clean text back to `data.frame`. The `Corpus` object from `tm` is ordered, so we can apply this back into the subsetted `data.frame`.
 
 ```{r}
 add_preprocessed_text_to_df <- function(df_to_append_to, cleaned_doc_corpus) {
@@ -527,10 +538,10 @@ add_preprocessed_text_to_df <- function(df_to_append_to, cleaned_doc_corpus) {
 }
 
 text_df <- add_preprocessed_text_to_df(text_df, doc_corpus)
-head(text_df)
+# head(text_df)
 ```
 
-We save the results to disk for empirical validation and inspection:
+We can save the results to disk for empirical validation and inspection by uncommenting this following block.
 
 ```{r}
 # save_csv(text_df, 'data/', 'compare_disambiguation_and_preprocessing.csv.csv')
@@ -539,66 +550,57 @@ We save the results to disk for empirical validation and inspection:
 
 ## TF-IDF
 
-For a primer, please read the [wikipedia page](https://en.wikipedia.org/wiki/Tf%E2%80%93idf). Note the high sparsity.
+For a primer, please read the [wikipedia page](https://en.wikipedia.org/wiki/Tf%E2%80%93idf). Note the high sparsity. This first function is a 'stub' that may be used to manually limit the vocabulary used to commpute TF-IDF (for example, a controlled medical vocabulary with synonyms...). For now we rely on TF-IDF to parse all unique tokens in the input space. We will see how this scales.
 
 ```{r}
-doc_dtm <- tm::DocumentTermMatrix(doc_corpus)
-doc_dtm$dimnames$Docs <- as.character(text_df$STUDY_NOTE_ID) # make sure to preserve document names
-```
-
-
-```{r}
-get_shortest_document_length <- function(doc_dtm) {
-  #' function to find the shortest document
-  #' @param corpusObject
-  rowTotals <- apply(doc_dtm , 1, sum)
-  print(min(rowTotals)) # the shortest document
-}
-
-get_shortest_document_length(doc_dtm)
-```
-
-```{r}
-get_dictionary_from_file<- function(filepath){
-  #' function to return a vector of words to be used in a TF-IDF matrix
-  #' @param filepath: path of file containing lexical resources
-  #' @NOTE: stub
-}
+# get_dictionary_from_file<- function(filepath){
+#   #' function to return a vector of words to be used in a TF-IDF matrix
+#   #' @param filepath: path of file containing lexical resources
+#   #' @NOTE: stub
+# }
 
 ```
 
+The function below builds a TF-IDF matrix from the corpus object created in the preprocessing steps above.
 
 ```{r}
-build_tfidf_matrix <- function(corpus, dictionary, ID_vector) {
+build_tfidf_matrix <- function(text_vector, ID_vector, dictionary) {
   #' fuction to return a new tf_idf object
   #' @param corpus: a corpus object to use to create the tf_idf mat
+  #' @param ID_vector: vector of document IDs to add to tf_idf matrix
   #' @param dictionary: a corpus of words to use instead of those passed from the corpus
-  #' @param ID_vector: vector of document IDs to add to tf_idf matrix
-  #' @param ID_vector: vector of document IDs to add to tf_idf matrix
+  
+  corpus <- tm::VCorpus(tm::VectorSource(text_vector))
   
   if (missing(dictionary)) {
     dtm.tfidf <- tm::DocumentTermMatrix(corpus, control = list(weighting=weightTfIdf))
     dtm.tfidf$dimnames$Docs <- as.character(ID_vector)
     return(dtm.tfidf)
   } else {
-   print(paste0('NEEED! Dictionary procedure. ', dictionary)) 
+   print(paste0('NEED! Dictionary procedure. ', dictionary)) 
   }
 }
 
-dtm.tfidf <- build_tfidf_matrix(corpus = doc_corpus, ID_vector = text_df$STUDY_NOTE_ID)
+dtm.tfidf <- build_tfidf_matrix(text_vector = text_df$processed_text, ID_vector = text_df$STUDY_NOTE_ID)
 
-# 
+# this test is for when a dictionary-based approach can be taken (depending on the stub above)
 # build_tfidf_matrix(corpus = doc_corpus,
 #                                 dictionary = 'test',
 #                                 ID_vector = text_df$STUDY_NOTE_ID)
 ```
+
+Inspect the TF_IDF matrix, note the high sparsity.
+
+```{r}
+inspect(dtm.tfidf)
+```
+
 
 Remove sparse terms, more bang for our buck.
 
 ```{r}
 dtm.tfidf <- tm::removeSparseTerms(dtm.tfidf, sparse = .95)
 ```
-
 
 Convert tf_idf object to `data.frame` and pivot so that each term is a column. Important reference: [questions/8161836](https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe).
 
@@ -648,7 +650,7 @@ new_features_df <- merge(x = text_df,
                          by.x=c('STUDY_NOTE_ID'),
                          by.y=c('document_id'),
                          all.x = TRUE)
-head(new_features_df)
+# head(new_features_df)
 ```
 
 Sanity checks
@@ -662,23 +664,249 @@ ncol(new_features_df) # expect many
 nrow(new_features_df) # expect 1000
 ```
 
+
 Save the resulting file (note that there are other methods for doing this).
 
 ```{r}
 # save_csv(new_features_df, 'data/', 'new_feature_extraction.csv')
 ```
 
-# Descriptive Statistics
+# Exploratory Textual Analysis
+
+## Tokenization
+
+This section is based loosely on [Lyric Analysis with NLP & Machine Learning with R](https://www.datacamp.com/community/tutorials/R-nlp-machine-learning):
+
+  _R NLP & Machine Learning: Lyric Analysis [Internet]. DataCamp Community. 2018 [cited 2019 Jul 16]. Available from: https://www.datacamp.com/community/tutorials/R-nlp-machine-learning_
+  
+```{r}
+unnested_token_df <-  text_df %>%
+  unnest_tokens(word, processed_text) %>%
+  anti_join(stop_words) %>%
+  distinct() 
+
+# head(unnested_token_df)
+```
+
+```{r}
+names(text_df)
+```
+
+The following block is taken from [https://www.datacamp.com/community/tutorials/R-nlp-machine-learning](https://www.datacamp.com/community/tutorials/R-nlp-machine-learning) and produces a nice graphic.
+
+```{r}
+full_word_count <- text_df %>%
+  unnest_tokens(word, processed_text) %>%
+  group_by(AUTHOR_SERVICE) %>%
+  summarise(num_words = n()) %>%
+  arrange(desc(num_words)) 
+
+full_word_count[1:20,] %>%
+  ungroup(num_words, AUTHOR_SERVICE) %>%
+  mutate(num_words = formattable::color_bar("lightblue")(num_words)) %>%
+  mutate(AUTHOR_SERVICE = color_tile("orange","orange")(AUTHOR_SERVICE)) %>%
+  kable("html", escape = FALSE, align = "c", caption = "Departments with the highest number of words (verbosity)") %>%
+  kable_styling(bootstrap_options = 
+                  c("striped", "condensed", "bordered"), 
+                  full_width = FALSE)
+```
+
+```{r}
+# full_word_count %>%
+#   ggplot() +
+#     geom_histogram(aes(x = num_words)) +
+#     ylab("Note Count") + 
+#     xlab("Word Count per Note") +
+#     ggtitle("Word Count Distribution") +
+#     theme(plot.title = element_text(hjust = 0.5),
+#           legend.title = element_blank(),
+#           panel.grid.minor.y = element_blank())
+```
+
+
+
+```{r}
+full_word_count <- text_df %>%
+  unnest_tokens(word, processed_text) %>%
+  group_by(NOTE_TYPE) %>%
+  summarise(num_words = n()) %>%
+  arrange(desc(num_words)) 
+
+full_word_count[1:20,] %>%
+  ungroup(num_words, NOTE_TYPE) %>%
+  mutate(num_words = formattable::color_bar("lightblue")(num_words)) %>%
+  mutate(NOTE_TYPE = color_tile("orange","orange")(NOTE_TYPE)) %>%
+  kable("html", escape = FALSE, align = "c", caption = "Departments with the highest number of words (verbosity)") %>%
+  kable_styling(bootstrap_options = 
+                  c("striped", "condensed", "bordered"), 
+                  full_width = FALSE)
+```
+
+
+```{r}
+unnested_token_df %>%
+  count(word, sort = TRUE) %>%
+  top_n(30) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot() +
+    geom_col(aes(word, n), fill = "lightblue") +
+    theme(legend.position = "none", 
+          plot.title = element_text(hjust = 0.5),
+          panel.grid.major = element_blank()) +
+    xlab("") + 
+    ylab("Note Count") +
+    ggtitle("Most Frequently Used Words in Notes Sample") +
+    coord_flip()
+```
+
+```{r}
+words_counts <- unnested_token_df %>%
+  count(word, sort = TRUE) 
+
+wordcloud2(words_counts[1:300, ], size = .5)
+```
+
+Words by Author Services:
+
+```{r}
+words_by_author <- unnested_token_df %>% 
+  group_by(AUTHOR_SERVICE) %>%
+  count(word, AUTHOR_SERVICE, sort = TRUE) %>%
+  slice(seq_len(8)) %>%
+  ungroup() %>%
+  arrange(AUTHOR_SERVICE,n) %>%
+  mutate(row = row_number()) 
+
+# note, this will need to be handled differently as the input space scales
+words_by_author[1:50,] %>%
+  ggplot(aes(row, n, fill = AUTHOR_SERVICE)) +
+    geom_col(show.legend = NULL) +
+    labs(x = NULL, y = "Note Count") +
+    ggtitle("Popular Words by Author Service") + 
+    facet_wrap(~AUTHOR_SERVICE, scales = "free") +
+    scale_x_continuous(  # This handles replacement of row 
+      breaks = words_by_author$row, # notice need to reuse data frame
+      labels = words_by_author$word) +
+    coord_flip()
+```
+
+```{r}
+words_by_type <- unnested_token_df %>% 
+  group_by(NOTE_TYPE) %>%
+  count(word, NOTE_TYPE, sort = TRUE) %>%
+  slice(seq_len(8)) %>%
+  ungroup() %>%
+  arrange(NOTE_TYPE,n) %>%
+  mutate(row = row_number()) 
+
+# note, this will need to be handled differently as the input space scales
+words_by_type[1:50,] %>%
+  ggplot(aes(row, n, fill = NOTE_TYPE)) +
+    geom_col(show.legend = NULL) +
+    labs(x = NULL, y = "Note Count") +
+    ggtitle("Popular Words by Author Service") + 
+    facet_wrap(~NOTE_TYPE, scales = "free") +
+    scale_x_continuous(  # This handles replacement of row 
+      breaks = words_by_type$row, # notice need to reuse data frame
+      labels = words_by_type$word) +
+    coord_flip()
+```
+
+
+```{r}
+#unnest and remove undesirable words, but leave in stop and short words
+word_lengths <- text_df %>%
+  unnest_tokens(word, processed_text) %>%
+  distinct() %>%
+  mutate(word_length = nchar(word)) 
+
+word_lengths %>%
+  count(word_length, sort = TRUE) %>%
+  ggplot(aes(word_length), 
+         binwidth = 10) + 
+    geom_histogram(aes(fill = ..count..),
+                   breaks = seq(1,25, by = 2), 
+                   show.legend = FALSE) + 
+    xlab("Word Length") + 
+    ylab("Word Count") +
+    ggtitle("Word Length Distribution") +
+    theme(plot.title = element_text(hjust = 0.5),
+          panel.grid.minor = element_blank())
+```
+
+```{r}
+# head(text_df)
+```
+
+
+
+
+```{r}
+lex_diversity_per_type <- text_df %>%
+  filter(NOTE_TYPE != "NA") %>%
+  unnest_tokens(word, processed_text) %>%
+  group_by(NOTE_TYPE) %>%
+  summarise(lex_diversity = n_distinct(word)) %>%
+  arrange(desc(lex_diversity)) 
+
+diversity_plot <- lex_diversity_per_type %>%
+  ggplot(aes(NOTE_TYPE, lex_diversity)) +
+    geom_point(color = 'blue',
+               alpha = .4, 
+               size = 4, 
+               position = "jitter") + 
+    stat_smooth(color = "black", se = FALSE, method = "lm") +
+    geom_smooth(aes(x = NOTE_TYPE, y = lex_diversity), se = FALSE,
+                color = "blue", lwd = 2) +
+    ggtitle("Lexical Diversity") +
+    xlab("") + 
+    ylab("") +
+    scale_color_manual(values = brewer.pal(11, "Spectral")) +
+    theme_classic() +
+    coord_flip()
+
+diversity_plot
+```
+
+```{r}
+lex_density_per_type <- text_df %>%
+  filter(NOTE_TYPE != "NA") %>%
+  unnest_tokens(word, processed_text) %>%
+  group_by(NOTE_TYPE) %>%
+  summarise(lex_density = n_distinct(word)/n()) %>%
+  arrange(desc(lex_density))
+
+density_plot <- lex_density_per_type %>%
+  ggplot(aes(NOTE_TYPE, lex_density)) + 
+    geom_point(color = "blue",
+               alpha = .4, 
+               size = 4, 
+               position = "jitter") + 
+    stat_smooth(color = "black", 
+                se = FALSE, 
+                method = "lm") +
+    geom_smooth(aes(x = NOTE_TYPE, y = lex_density), 
+                se = FALSE,
+                color = "blue", 
+                lwd = 2) +
+    ggtitle("Lexical Density") + 
+    xlab("") + 
+    ylab("") +
+    scale_color_manual(values = brewer.pal(11, "Spectral")) +
+    theme_classic() +
+    coord_flip()
+
+density_plot
+```
+
 
 ## N-Gram Analysis
 
 ```{r}
-cols = c('STUDY_NOTE_ID','processed_text')
-tmp_df <- subset_dataframe(text_df, cols) # note, working with sampled df
+notes_ngrams <- tidytext::unnest_tokens(text_df, ngram, 'processed_text', token = "ngrams", n = 3)
 
-notes_ngrams <- tidytext::unnest_tokens(tmp_df, ngram, 'processed_text', token = "ngrams", n = 3)
-
-head(notes_ngrams)
+# head(notes_ngrams)
 ```
 
 ```{r}
@@ -717,10 +945,6 @@ tm::findAssocs(dtm.tfidf, "symptom", corlimit = 0.2)
 tm::findAssocs(dtm.tfidf, "dementia", corlimit = 0.1)
 ```
 
-```{r}
-tm::findAssocs(dtm.tfidf, "memori", corlimit = 0.1)
-```
-
 ## Term Frequencies
 
 Below we define a function to calculate raw counts and relative frequecies from a given column of textual data. 
@@ -755,7 +979,7 @@ get_token_frequecy_from_column <- function(df, columnName, sortByHighFQ=TRUE) {
 }
 
 raw_frequencies <- get_token_frequecy_from_column(text_df, 'processed_text', sortByHighFQ=TRUE)
-head(raw_frequencies, 50)
+# head(raw_frequencies, 50)
 ```
 
 If we need to save a relative frequency file for CARD for any reason, here is a function to do it:
@@ -919,9 +1143,50 @@ Saving dataframes to disk
 # save_each_record_to_card_file(text_df)
 ```
 
+## Subset Text Field
+Subset the `data.frame`. We retain the text notes and ID fields for mapping back to the data.frame.
+
+```{r}
+# subset_dataframe <- function(my_dataframe, column_vector) {
+#   #' function to subset a dataframe based on list of columns, returns new data.frame
+#   #' @param my_dataframe: a data.frame from which to derive the subset
+#   #' @param column_vector: list of strings containing columns to included in new data.frame
+#   subset.df <- subset(my_dataframe, select=column_vector)
+#   return(subset.df)
+# }
+# 
+# # list of columns to process
+# cols = c('STUDY_PAT_ID', 'STUDY_ENC_ID', 'STUDY_NOTE_ID','TEXT')
+# text_df <- subset_dataframe(transformed_df, cols) # note, working with sampled DF
+# 
+# head(text_df , 2)
+```
+
+## Term-document matrix code
+
+```{r}
+# doc_dtm <- tm::DocumentTermMatrix(doc_corpus)
+# doc_dtm$dimnames$Docs <- as.character(text_df$STUDY_NOTE_ID) # make sure to preserve document names
+```
 
 
-<!--html_preserve DO NOT CHANGE THIS FOOTER -->
+```{r}
+# get_shortest_document_length <- function(doc_dtm) {
+#   #' function to find the shortest document
+#   #' @param corpusObject
+#   rowTotals <- apply(doc_dtm , 1, sum)
+#   print(min(rowTotals)) # the shortest document
+# }
+# 
+# get_shortest_document_length(doc_dtm)
+```
+
+
+
+
+
+
+<!--html_preserve-->
 <div>
     	<footer><center>
 			<a href="http://www.socr.umich.edu/">SOCR Resource</a>

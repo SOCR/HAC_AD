@@ -49,7 +49,7 @@ This project assumes that:
 
 ## Packages/Dependencies
 
-```{r}
+```{r message=FALSE}
 library(tidyverse)
 library(tidytext)
 library(topicmodels)
@@ -65,6 +65,7 @@ library(stringi)
 library(formattable)
 library(wordcloud2)
 library(RColorBrewer)
+library(stringdist)
 
 ## another text_processing library that may be worth considering, spaCy is extremely powerful
 ## https://github.com/quanteda/spacyr
@@ -116,11 +117,8 @@ knitr::kable(enc_data_dictionary) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "condensed"), full_width = F)
 ```
 
-
-
 # Load data
 Load the data from the source file. Assumes file in `.xlsx` format. 
-
 
 ```{r}
 getwd() # make sure you're in the right spot! Expect "........./HAC_AD"
@@ -130,9 +128,7 @@ getwd() # make sure you're in the right spot! Expect "........./HAC_AD"
 
 This assumes that there is a separate directory for the data file. **Watch out for paths.**
 ```{r}
-relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" # osx
-# relative_sample_path <- "../../local_data/DS_PreprocessedAnonymized_Text.xlsx" # win
-# raw_data_df <-  read_xlsx_from_path(filepath = relative_sample_path)
+relative_sample_path <- "data/DS_PreprocessedAnonymized_Text.xlsx" 
 ```
 
 ## Full Data Set
@@ -203,13 +199,13 @@ raw_data_df <- read_xlsx_from_path(relative_sample_path)
 names(raw_data_df)[names(raw_data_df) == 'DS_PreprocessedAnonymized_Text'] <- 'TEXT' # make names consistent 
 raw_data_df <- raw_data_df[1:(length(raw_data_df)-1)] # drop last column
 sampled_df <- raw_data_df # rename for consistency
-# head(sampled_df)
+head(sampled_df)
 ```
+
 
 ```{r}
-names(sampled_df)
+dim(sampled_df)
 ```
-
 
 ### Sampling from Full Data Set
 Randomly sample from the full set to speed up development while maximizing exposure to corner cases.
@@ -426,6 +422,21 @@ gc() # garbage collection
 head(text_df$card_disambiguated_note, 1)
 ```
 
+We want to get an idea of how much CARD processes changed the raw notes. We use a few distance measures to look at this. We use the [restricted Damerau-Levenshtein distance](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance) method from the `stringdist` package.
+
+```{r}
+text_df$osa_distance_raw_to_CARD <- mapply(stringdist, a=text_df$TEXT, b=text_df$card_disambiguated_note, method=c('osa'))
+head(text_df$osa_distance_raw_to_CARD)
+```
+
+```{r}
+ggplot(text_df, aes(x=osa_distance_raw_to_CARD)) + 
+  geom_histogram(aes(y=..density..), color="black", fill="lightblue") +
+  geom_density(alpha=.2, fill="orange") +
+  labs(title="Histogram of Optimal String Aligment Distance",x="OSA Distance (raw to CARD output)", y = "Density")
+```
+
+
 ```{r}
 # head(text_df, 4)
 ```
@@ -540,6 +551,35 @@ add_preprocessed_text_to_df <- function(df_to_append_to, cleaned_doc_corpus) {
 text_df <- add_preprocessed_text_to_df(text_df, doc_corpus)
 # head(text_df)
 ```
+
+Let's again look at the OSA distances
+
+```{r}
+text_df$osa_distance_processed_to_CARD <- mapply(stringdist, a=text_df$processed_text, b=text_df$card_disambiguated_note, method=c('osa'))
+head(text_df$osa_distance_processed_to_CARD)
+```
+
+```{r}
+ggplot(text_df, aes(x=osa_distance_processed_to_CARD)) + 
+  geom_histogram(aes(y=..density..), color="black", fill="lightblue") +
+  geom_density(alpha=.2, fill="orange") +
+  labs(title="Histogram of Optimal String Aligment Distance",x="OSA Distance (processed to CARD output)", y = "Density")
+```
+
+
+```{r}
+text_df$osa_distance_processed_to_raw <- mapply(stringdist, a=text_df$processed_text, b=text_df$TEXT, method=c('osa'))
+head(text_df$osa_distance_processed_to_raw)
+```
+
+
+```{r}
+ggplot(text_df, aes(x=osa_distance_processed_to_raw)) + 
+  geom_histogram(aes(y=..density..), color="black", fill="lightblue") +
+  geom_density(alpha=.2, fill="orange") +
+  labs(title="Histogram of Optimal String Aligment Distance",x="OSA Distance (raw to processed)", y = "Density")
+```
+
 
 We can save the results to disk for empirical validation and inspection by uncommenting this following block.
 
